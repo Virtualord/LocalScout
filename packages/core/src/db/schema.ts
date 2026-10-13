@@ -64,13 +64,20 @@ export type ContactEvent = (typeof CONTACT_EVENTS)[number];
 export const RUN_STATUSES = ['queued', 'running', 'completed', 'failed', 'cancelled'] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
 
-const createdAt = integer('created_at', { mode: 'timestamp_ms' })
-  .notNull()
-  .default(sql`(unixepoch() * 1000)`);
+/**
+ * Milliseconds since the epoch, as an integer.
+ *
+ * `unixepoch()` alone truncates to whole seconds, which makes "the newest audit
+ * for this lead" ambiguous whenever two audits land in the same second, which a
+ * fast re-audit or a fixture run does routinely. `unixepoch('subsec')` keeps the
+ * fraction; the cast truncates it to whole milliseconds so the column stays an
+ * INTEGER.
+ */
+const nowMs = sql`(cast(unixepoch('subsec') * 1000 as integer))`;
 
-const updatedAt = integer('updated_at', { mode: 'timestamp_ms' })
-  .notNull()
-  .default(sql`(unixepoch() * 1000)`);
+const createdAt = integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs);
+
+const updatedAt = integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(nowMs);
 
 /**
  * One search over one city for one business type.
@@ -172,6 +179,26 @@ export interface AuditCheck {
   detail?: string;
 }
 
+/**
+ * The persisted shape of one finding.
+ *
+ * Declared here rather than in the audit layer because it is a storage
+ * contract: the catalog that produces these lives in `audit/`, but this is what
+ * a stored row must satisfy, and the drafting layer reads `evidence` from it to
+ * build the number allowlist.
+ */
+export interface StoredFinding {
+  /** Catalog id, for example `SLOW_LCP`. */
+  id: string;
+  severity: 'high' | 'medium' | 'low';
+  /** Plain-English description shown to the user. */
+  label: string;
+  /** The measured value and the threshold it was compared against. */
+  evidence: Record<string, string | number | boolean>;
+  /** Contribution to the opportunity score. */
+  weight: number;
+}
+
 export const audits = sqliteTable(
   'audits',
   {
@@ -185,7 +212,7 @@ export const audits = sqliteTable(
     durationMs: integer('duration_ms').notNull(),
     metrics: text('metrics', { mode: 'json' }).$type<AuditMetrics>().notNull(),
     checks: text('checks', { mode: 'json' }).$type<AuditCheck[]>().notNull(),
-    findings: text('findings', { mode: 'json' }).$type<unknown[]>().notNull(),
+    findings: text('findings', { mode: 'json' }).$type<StoredFinding[]>().notNull(),
     opportunityScore: integer('opportunity_score').notNull(),
     /** Raw Lighthouse JSON on disk, for a human to read. */
     reportPath: text('report_path'),
@@ -247,9 +274,7 @@ export const contactLog = sqliteTable(
     channel: text('channel').$type<Channel>().notNull(),
     event: text('event').$type<ContactEvent>().notNull(),
     note: text('note'),
-    at: integer('at', { mode: 'timestamp_ms' })
-      .notNull()
-      .default(sql`(unixepoch() * 1000)`),
+    at: integer('at', { mode: 'timestamp_ms' }).notNull().default(nowMs),
   },
   (table) => [
     index('contact_log_lead_idx').on(table.leadId),

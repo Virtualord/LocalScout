@@ -10,7 +10,7 @@ CREATE TABLE `audits` (
 	`findings` text NOT NULL,
 	`opportunity_score` integer NOT NULL,
 	`report_path` text,
-	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,
 	FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -22,7 +22,7 @@ CREATE TABLE `contact_log` (
 	`channel` text NOT NULL,
 	`event` text NOT NULL,
 	`note` text,
-	`at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	`at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,
 	FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -43,7 +43,7 @@ CREATE TABLE `drafts` (
 	`latency_ms` integer DEFAULT 0 NOT NULL,
 	`grounded` integer DEFAULT false NOT NULL,
 	`validation_errors` text NOT NULL,
-	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,
 	`approved_at` integer,
 	FOREIGN KEY (`lead_id`) REFERENCES `leads`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`audit_id`) REFERENCES `audits`(`id`) ON UPDATE no action ON DELETE set null
@@ -71,8 +71,8 @@ CREATE TABLE `leads` (
 	`status` text DEFAULT 'discovered' NOT NULL,
 	`skip_reason` text,
 	`notes` text,
-	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,
+	`updated_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL,
 	FOREIGN KEY (`source_run_id`) REFERENCES `runs`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
@@ -99,7 +99,7 @@ CREATE TABLE `runs` (
 	`tokens_in` integer DEFAULT 0 NOT NULL,
 	`tokens_out` integer DEFAULT 0 NOT NULL,
 	`error` text,
-	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL
+	`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL
 );
 --> statement-breakpoint
 CREATE INDEX `runs_status_idx` ON `runs` (`status`);--> statement-breakpoint
@@ -111,7 +111,7 @@ CREATE TABLE `saved_searches` (
 	`limit` integer DEFAULT 20 NOT NULL,
 	`language` text DEFAULT 'en' NOT NULL,
 	`cron` text,
-	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL
+	`created_at` integer DEFAULT (cast(unixepoch('subsec') * 1000 as integer)) NOT NULL
 );
 --> statement-breakpoint
 CREATE INDEX `saved_searches_cron_idx` ON `saved_searches` (`cron`);

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9c77dae6-41bc-4b82-bd96-c8b102dc1c6f",
+  "id": "0747ce2e-36f3-4d22-ac38-4c9bd3522ecc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "audits": {
@@ -90,7 +90,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {
@@ -164,7 +164,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {
@@ -305,7 +305,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "approved_at": {
           "name": "approved_at",
@@ -494,7 +494,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         },
         "updated_at": {
           "name": "updated_at",
@@ -502,7 +502,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {
@@ -687,7 +687,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {
@@ -760,7 +760,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
         }
       },
       "indexes": {

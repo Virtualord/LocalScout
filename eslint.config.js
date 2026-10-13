@@ -23,6 +23,11 @@ export default tseslint.config(
       '**/test-results/**',
       '**/data/**',
       '**/eval/results/**',
+      // ESLint only understands JS and TS. Everything else (YAML, Markdown,
+      // CSS, JSON) is Prettier's job, and including them here makes the JS
+      // parser fail on the first non-JS character.
+      '**/*.{yml,yaml,md,css,json,mdx}',
+      'pnpm-lock.yaml',
     ],
   },
 
@@ -88,7 +93,7 @@ export default tseslint.config(
 
   {
     // Config files are plain JS, not part of a TS project.
-    files: ['*.config.{js,mjs,ts}', '.github/**/*.yml'],
+    files: ['*.config.{js,mjs,ts}'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' },
   },
