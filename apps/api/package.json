@@ -6,8 +6,8 @@
   "description": "Local HTTP API, SSE progress, and the batch CLI for Localscout.",
   "main": "./src/index.ts",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
     "cli": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit"
   },
