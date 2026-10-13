@@ -1,0 +1,466 @@
+/*
+ * Global styles.
+ *
+ * Only what the design system needs: the token file, self-hosted fonts, and the
+ * shared primitives (display type, hard shadows, focus). Component styles live
+ * with their components.
+ */
+
+/* Fonts are self-hosted so the app works fully offline. */
+@import '@fontsource/barlow-condensed/800.css';
+@import '@fontsource/barlow-condensed/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/700.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+
+@import 'tailwindcss';
+@import './tokens.css';
+
+/*
+ * Display type: condensed, tight, and always the paper/coral two-tone pairing
+ * rather than a single colour.
+ */
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.display-hero {
+  font-size: var(--text-hero);
+}
+
+.display-section {
+  font-size: var(--text-section);
+}
+
+.display-card {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-card-title);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* Mono is for labels, chips, numbers and navigation. Never for prose. */
+.mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/*
+ * The hard shadow. Always paired with a colour, never used alone, because a
+ * shadow with no colour reads as a rendering artefact.
+ */
+.hard-shadow {
+  box-shadow: var(--shadow-hard) var(--color-band-dark);
+}
+
+.hard-shadow-coral {
+  box-shadow: var(--shadow-hard) var(--color-coral-shadow);
+}
+
+/*
+ * Press-in: the card moves into its own shadow and the shadow collapses.
+ * This is the reference's signature interaction and it is used on lead cards and
+ * tech cells only, never on hover alone.
+ */
+.press-in {
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.press-in:hover {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0;
+  opacity: 0.92;
+}
+
+/* Reduced motion: the state change still happens, it just does not animate. */
+@media (prefers-reduced-motion: reduce) {
+  .press-in,
+  .press-in:hover {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Body prose stays readable and under 80 characters per line. */
+.prose-measure {
+  max-width: 65ch;
+}
+
+/*
+ * Buttons.
+ *
+ * Sharp corners, a hard shadow paired with a colour, and a press rather than a
+ * hover-lift. Defined here rather than as Tailwind utilities because the shadow
+ * colour changes with the variant, and `shadow-[2px_2px_0_...]` composed per
+ * variant in the component is how the wrong colour ships unnoticed.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 0;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.btn:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.btn-sm {
+  font-size: 11px;
+  padding: 0.375rem 0.75rem;
+}
+
+.btn-md {
+  font-size: 13px;
+  padding: 0.625rem 1.25rem;
+}
+
+.btn-lg {
+  font-size: 14px;
+  padding: 0.875rem 1.75rem;
+}
+
+/* Primary: coral face, ink label, hard shadow in the dark red. */
+.btn-primary {
+  background-color: var(--color-coral);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-hard) var(--color-coral-shadow);
+}
+
+.btn-primary:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--color-coral-shadow);
+}
+
+.btn-primary:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--color-coral-shadow);
+}
+
+/* Secondary: paper face, ink border and shadow. */
+.btn-secondary {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  border-color: var(--color-ink);
+  box-shadow: var(--shadow-hard) var(--color-ink);
+}
+
+.btn-secondary:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--color-ink);
+}
+
+.btn-secondary:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--color-ink);
+}
+
+/* Ghost: no face, no shadow. Used inside dark bands. */
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-paper);
+}
+
+.btn-ghost:hover {
+  background-color: rgb(247 247 242 / 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-primary:active,
+  .btn-secondary:active {
+    transition: none;
+    transform: none;
+  }
+}
+
+/*
+ * Route loader: four squares bobbing about a quarter of their size, staggered
+ * left to right. Keyed off --dur-slow so the timing lives with the other motion
+ * tokens.
+ */
+@keyframes loader-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-25%);
+  }
+}
+
+/*
+ * Lead drop-in and audit recolor, used by the map when a live run reports new
+ * leads. Both are disabled under reduced motion, where the state still changes
+ * but instantly.
+ */
+@keyframes lead-drop-in {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes audit-recolor {
+  0% {
+    filter: brightness(2);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-animate='lead-drop-in'],
+  [data-animate='audit-recolor'] {
+    animation: none;
+  }
+}
+
+/* Count-up tiles animate their value change; static under reduced motion. */
+[data-animate='count-up'] {
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+/*
+ * Dialog: the backdrop fades to a dark scrim, the panel rises 8px while
+ * fading in. Timings are inferred from the reference recording, where the panel
+ * settles faster than the backdrop.
+ */
+@keyframes dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-panel-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.dialog-overlay {
+  background-color: rgb(16 32 29 / 0.72);
+  animation: dialog-backdrop-in 160ms var(--ease-out);
+}
+
+.dialog-panel {
+  animation: dialog-panel-in 160ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-overlay,
+  .dialog-panel {
+    animation: none;
+  }
+}
+
+/*
+ * Accordion: height animates through grid-template-rows, which is the only way
+ * to animate to an unknown content height without measuring it.
+ */
+@keyframes accordion-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tabs underline. */
+.tabs-list {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--color-ink);
+}
+
+.tabs-trigger {
+  padding: 0.625rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.tabs-trigger[data-state='active'] {
+  border-bottom-color: var(--color-coral);
+}
+
+/*
+ * Accordion trigger and panel.
+ *
+ * The panel animates through grid-template-rows 0fr -> 1fr, the only way to
+ * animate to an unknown content height without measuring it in JS.
+ */
+.accordion-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 1.125rem 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.accordion-chevron {
+  display: inline-block;
+}
+
+/* Rotated by the component when open; kept here so the transition applies. */
+[data-state='open'] > .accordion-trigger .accordion-chevron {
+  transform: rotate(180deg);
+}
+
+.accordion-content {
+  overflow: hidden;
+}
+
+.accordion-content[data-state='open'] {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: accordion-open 200ms var(--ease-out);
+}
+
+.accordion-content[data-state='closed'] {
+  display: grid;
+  grid-template-rows: 0fr;
+}
+
+.accordion-content > div {
+  min-height: 0;
+}
+
+@keyframes accordion-open {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accordion-content[data-state='open'] {
+    animation: none;
+  }
+  .accordion-chevron {
+    transition: none;
+  }
+}
+
+/*
+ * The active page underline: 2px coral, offset 6px below the label.
+ */
+.nav-active {
+  position: relative;
+}
+
+.nav-active::after {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 2px;
+  height: 2px;
+  background-color: var(--color-coral);
+}
+
+/*
+ * Dropdown panel: deep teal, 1px ink border, about 260px wide.
+ *
+ * Items lift slightly on hover, which is the only hover treatment a non-
+ * clickable region gets; the panel itself never moves.
+ */
+.nav-panel {
+  z-index: 50;
+  min-width: 260px;
+  padding: 6px;
+  background-color: var(--color-bg-deep);
+  border: 1px solid var(--color-ink);
+  animation: nav-panel-in var(--dur-fast) var(--ease-out);
+}
+
+@keyframes nav-panel-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.nav-panel-item {
+  padding: 0.5rem 0.75rem;
+  color: var(--color-paper);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.nav-panel-item:hover,
+.nav-panel-item:focus-visible {
+  background-color: rgb(247 247 242 / 0.12);
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-panel {
+    animation: none;
+  }
+}
