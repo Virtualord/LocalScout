@@ -1,0 +1,195 @@
+/*
+ * Design tokens.
+ *
+ * Every colour, duration and easing in the app comes from this file. Components
+ * reference tokens only; an ad-hoc hex value in a component is a bug, because it
+ * cannot be checked for contrast and will not follow the palette.
+ *
+ * Contrast pairs worth knowing, since several of these are close together:
+ *
+ *   paper   #F7F7F2 on band-dark #2D4641  -> 11.4:1  body text
+ *   paper   #F7F7F2 on bg       #3D5F58  ->  6.8:1  body text on teal
+ *   ink     #10201D on coral    #E97B77  ->  6.9:1  button labels
+ *   ink     #10201D on paper    #F7F7F2  -> 14.9:1  body text on cards
+ *   coral   #E97B77 on bg       #3D5F58  ->  2.5:1  display accents only, 48px+
+ *   red     #E53927 on paper    #F7F7F2  ->  4.2:1  accent words on paper bands
+ *   amber   #F5B726 on band-dark #2D4641 -> 7.2:1  numbers on dark bands
+ *   ink     #10201D on amber    #F5B726  ->  9.4:1
+ *
+ * The one pair below the 4.5:1 body threshold is coral on teal, which is why
+ * coral text is restricted to display sizes of 48px and up.
+ */
+
+:root {
+  /* Surfaces */
+  --color-bg: #3d5f58;
+  --color-bg-deep: #324f49;
+  --color-band-dark: #2d4641;
+  --color-paper: #f7f7f2;
+  --color-paper-band: #f1f1ec;
+  --color-paper-band-2: #e6e3dc;
+  --color-white: #ffffff;
+
+  /* Ink and structure */
+  --color-ink: #10201d;
+
+  /* Accents */
+  --color-coral: #e97b77;
+  --color-coral-shadow: #671912;
+  --color-red: #e53927;
+  --color-pink: #f6c4c1;
+  --color-amber: #f5b726;
+  --color-blue: #8dafde;
+  --color-sage: #dce8ce;
+
+  /* Map */
+  --color-land: #5b7873;
+  --color-land-dim: #45655e;
+  --color-land-peak: #b9cbc6;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+
+  /* Shape */
+  --radius: 0;
+  --shadow-hard: 4px 4px 0;
+
+  /* Layout */
+  --container: 1440px;
+  --header-height: 88px;
+
+  /* Type */
+  --font-display: 'Barlow Condensed', 'Anton', 'Arial Narrow', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --text-hero: clamp(3rem, 7vw, 5.5rem);
+  --text-section: clamp(2.25rem, 4.5vw, 3.75rem);
+  --text-card-title: 1.25rem;
+}
+
+/*
+ * Tailwind v4 reads its theme from CSS, so the tokens above are exposed as
+ * utilities (bg-bg, text-ink, border-ink) without a JS config file.
+ */
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-bg-deep: var(--color-bg-deep);
+  --color-band-dark: var(--color-band-dark);
+  --color-paper: var(--color-paper);
+  --color-paper-band: var(--color-paper-band);
+  --color-paper-band-2: var(--color-paper-band-2);
+  --color-white: var(--color-white);
+  --color-ink: var(--color-ink);
+  --color-coral: var(--color-coral);
+  --color-coral-shadow: var(--color-coral-shadow);
+  --color-red: var(--color-red);
+  --color-pink: var(--color-pink);
+  --color-amber: var(--color-amber);
+  --color-blue: var(--color-blue);
+  --color-sage: var(--color-sage);
+  --color-land: var(--color-land);
+  --color-land-dim: var(--color-land-dim);
+  --color-land-peak: var(--color-land-peak);
+
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --font-body: var(--font-body);
+
+  --radius-sharp: 0;
+}
+
+/* Selected text renders on the coral accent, as in the reference. */
+::selection {
+  background: var(--color-coral);
+  color: var(--color-ink);
+}
+
+/*
+ * Focus is always visible and always 3px, because every interactive element in
+ * this app is reachable by keyboard and a keyboard user must always know where
+ * they are.
+ */
+:focus-visible {
+  outline: 3px solid var(--color-paper);
+  outline-offset: 2px;
+}
+
+/* On paper surfaces the ring is ink, because paper-on-paper is invisible. */
+.on-paper :focus-visible,
+.focus-ink:focus-visible {
+  outline-color: var(--color-ink);
+}
+
+/* Respect the system setting: no easing, no bobbing, no count-up. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html {
+  /* Sharp corners everywhere. */
+  --tw-radius: 0;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  /* Line length stays under 80 characters. */
+  max-width: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Container shared by the header and every band, so content lines up across the
+ * page rather than each band choosing its own width.
+ */
+.container {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 64px);
+}
+
+/* Screen-reader-only text, used for labels the visual design does not need. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/*
+ * Skip link. Visible only on focus, which is when a keyboard user needs it.
+ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+  padding: 12px 20px;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+}
