@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    // No rootDir: the app imports `@localscout/core` by path mapping, so the
+    // program legitimately spans both packages. The app runs from source via
+    // tsx, so it emits nothing.
+    "paths": {
+      "@localscout/core": ["../../packages/core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

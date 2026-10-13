@@ -226,11 +226,26 @@ const NO_FINDINGS = {
   },
 } as const;
 
+/**
+ * How the sender introduces themselves.
+ *
+ * An empty name is omitted rather than rendered as "I am ,", which is what a
+ * first run with no SENDER_NAME configured would otherwise produce. The
+ * Settings screen asks for a name because the message reads better with one.
+ */
 const SENDER_INTRO = {
-  en: (sender: SenderProfile) => `I am ${sender.name}, I build ${sender.services}.`,
+  en: (sender: SenderProfile) =>
+    sender.name === ''
+      ? `I build ${sender.services}.`
+      : `I am ${sender.name}, I build ${sender.services}.`,
   hinglish: (sender: SenderProfile) =>
-    `Main ${sender.name} hoon, main ${sender.services} banata hoon.`,
-  hi: (sender: SenderProfile) => `मैं ${sender.name} हूँ, मैं ${sender.services} बनाता हूँ।`,
+    sender.name === ''
+      ? `Main ${sender.services} banata hoon.`
+      : `Main ${sender.name} hoon, main ${sender.services} banata hoon.`,
+  hi: (sender: SenderProfile) =>
+    sender.name === ''
+      ? `मैं ${sender.services} बनाता हूँ।`
+      : `मैं ${sender.name} हूँ, मैं ${sender.services} बनाता हूँ।`,
 } as const;
 
 /**

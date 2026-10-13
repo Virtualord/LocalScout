@@ -1,0 +1,27 @@
+{
+  "name": "@localscout/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local HTTP API, SSE progress, and the batch CLI for Localscout.",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@localscout/core": "workspace:*",
+    "@mastra/core": "^1.76.0",
+    "hono": "^4.13.13",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.2",
+    "tsx": "^4.23.15"
+  }
+}
