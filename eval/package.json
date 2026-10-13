@@ -1,0 +1,17 @@
+{
+  "name": "@localscout/eval",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Draft evaluation harness. Measures how often an open model produces a grounded draft.",
+  "scripts": {
+    "start": "tsx run.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@localscout/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  }
+}
