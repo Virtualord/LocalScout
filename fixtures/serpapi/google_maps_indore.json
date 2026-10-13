@@ -1,0 +1,241 @@
+{
+  "search_metadata": {
+    "id": "localscout-fixture-indore",
+    "status": "Success",
+    "processed_at": "2026-10-13 09:00:00 UTC",
+    "total_time_taken": 0.84
+  },
+  "search_parameters": {
+    "engine": "google_maps",
+    "type": "search",
+    "q": "Carpenter in Indore",
+    "ll": "Indore",
+    "gl": "in",
+    "hl": "en"
+  },
+  "search_information": {
+    "local_results_state": "Results for exact spelling",
+    "query_displayed": "Indore"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Rajpurohit Carpentry",
+      "place_id": "ChIJ00000000a6e7483f16d4",
+      "data_id": "0x89c20000b:0x00000000",
+      "gps_coordinates": {
+        "latitude": 22.7533,
+        "longitude": 75.8937
+      },
+      "rating": 4.6,
+      "reviews": 178,
+      "type": "Carpenter",
+      "types": ["Carpenter"],
+      "address": "Vijay Nagar, Indore",
+      "phone": "+91 98220 12345",
+      "hours": "Open",
+      "website": "https://rajpurohitcarpentry.in",
+      "links": {
+        "website": "https://rajpurohitcarpentry.in"
+      }
+    },
+    {
+      "position": 2,
+      "title": "Nandini Beauty Parlour",
+      "place_id": "ChIJ00000000ebc74ff0bc8d",
+      "data_id": "0x89c20001b:0x00000001",
+      "gps_coordinates": {
+        "latitude": 22.7198,
+        "longitude": 75.8568
+      },
+      "rating": 4.5,
+      "reviews": 402,
+      "type": "Beauty salon",
+      "types": ["Beauty salon"],
+      "address": "Palasia, Indore",
+      "phone": "+91 97720 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 3,
+      "title": "Om Sai Electricals",
+      "place_id": "ChIJ0000000030a757a26247",
+      "data_id": "0x89c20002b:0x00000002",
+      "gps_coordinates": {
+        "latitude": 22.6989,
+        "longitude": 75.8701
+      },
+      "rating": 4,
+      "reviews": 58,
+      "type": "Electrician",
+      "types": ["Electrician"],
+      "address": "Bhawarkuan, Indore",
+      "phone": "+91 90000 98765",
+      "hours": "Open",
+      "website": "https://instagram.com/omsaielectricals",
+      "links": {
+        "website": "https://instagram.com/omsaielectricals"
+      }
+    },
+    {
+      "position": 4,
+      "title": "Malwa Real Estate",
+      "place_id": "ChIJ0000000075875f540800",
+      "data_id": "0x89c20003b:0x00000003",
+      "gps_coordinates": {
+        "latitude": 22.7089,
+        "longitude": 75.8601
+      },
+      "rating": 4.3,
+      "reviews": 167,
+      "type": "Real estate agency",
+      "types": ["Real estate agency"],
+      "address": "South Tukajji, Indore",
+      "phone": "+91 93110 12345",
+      "hours": "Open",
+      "website": "https://malwarealestate.in",
+      "links": {
+        "website": "https://malwarealestate.in"
+      }
+    },
+    {
+      "position": 5,
+      "title": "Shree Ganesh Sweets",
+      "place_id": "ChIJ00000000ba676705adb9",
+      "data_id": "0x89c20004b:0x00000004",
+      "gps_coordinates": {
+        "latitude": 22.7196,
+        "longitude": 75.8552
+      },
+      "rating": 4.8,
+      "reviews": 654,
+      "type": "Sweet shop",
+      "types": ["Sweet shop"],
+      "address": "Rajwada, Indore",
+      "phone": "+91 98930 98765",
+      "hours": "Open",
+      "website": "https://shreiganeshsweets.in",
+      "links": {
+        "website": "https://shreiganeshsweets.in"
+      }
+    },
+    {
+      "position": 6,
+      "title": "Agrawal Photography",
+      "place_id": "ChIJ00000000ff476eb75372",
+      "data_id": "0x89c20005b:0x00000005",
+      "gps_coordinates": {
+        "latitude": 22.7289,
+        "longitude": 75.8712
+      },
+      "rating": 4.4,
+      "reviews": 93,
+      "type": "Photographer",
+      "types": ["Photographer"],
+      "address": "Indore",
+      "phone": "+91 99620 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 7,
+      "title": "Kisan Agro Equipment",
+      "place_id": "ChIJ0000000044277668f92c",
+      "data_id": "0x89c20006b:0x00000006",
+      "gps_coordinates": {
+        "latitude": 22.6912,
+        "longitude": 75.8567
+      },
+      "rating": 3.8,
+      "reviews": 27,
+      "type": "Farm equipment supplier",
+      "types": ["Farm equipment supplier"],
+      "address": "Lalbagh, Indore",
+      "phone": "+91 93320 12345",
+      "hours": "Open",
+      "website": "https://kisanagro.in",
+      "links": {
+        "website": "https://kisanagro.in"
+      }
+    },
+    {
+      "position": 8,
+      "title": "Laxmi Physiotherapy",
+      "place_id": "ChIJ0000000089077e1a9ee5",
+      "data_id": "0x89c20007b:0x00000007",
+      "gps_coordinates": {
+        "latitude": 22.6389,
+        "longitude": 75.8278
+      },
+      "rating": 4.9,
+      "reviews": 145,
+      "type": "Physiotherapist",
+      "types": ["Physiotherapist"],
+      "address": "Rau, Indore",
+      "phone": "+91 91110 98765",
+      "hours": "Open",
+      "website": "https://laxmiphysio.in",
+      "links": {
+        "website": "https://laxmiphysio.in"
+      }
+    },
+    {
+      "position": 9,
+      "title": "New Bombay Bakery",
+      "place_id": "ChIJ00000000cde785cc449e",
+      "data_id": "0x89c20008b:0x00000008",
+      "gps_coordinates": {
+        "latitude": 22.7512,
+        "longitude": 75.8901
+      },
+      "rating": 4.2,
+      "reviews": 289,
+      "type": "Bakery",
+      "types": ["Bakery"],
+      "address": "Vijay Nagar, Indore",
+      "phone": "+91 97020 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 10,
+      "title": "Precision Auto Care",
+      "place_id": "ChIJ0000000012c78d7dea58",
+      "data_id": "0x89c20009b:0x00000009",
+      "gps_coordinates": {
+        "latitude": 22.7621,
+        "longitude": 75.8912
+      },
+      "rating": 4.1,
+      "reviews": 88,
+      "type": "Auto repair shop",
+      "types": ["Auto repair shop"],
+      "address": "Nipania, Indore",
+      "phone": "+91 99220 98765",
+      "hours": "Open",
+      "website": "https://precisionautocare.in",
+      "links": {
+        "website": "https://precisionautocare.in"
+      }
+    },
+    {
+      "position": 11,
+      "title": "Verma Stone Works",
+      "place_id": "ChIJ000000000536e1ac21a1",
+      "data_id": "0x89c2000ab:0x0000000a",
+      "gps_coordinates": {
+        "latitude": 22.7651,
+        "longitude": 75.8944
+      },
+      "rating": 4,
+      "reviews": 12,
+      "type": "Stone contractor",
+      "types": ["Stone contractor"],
+      "address": "Nipania, Indore",
+      "phone": "+91 94540 12345",
+      "hours": "Open",
+      "website": "https://linktr.ee/vermastone",
+      "links": {
+        "website": "https://linktr.ee/vermastone"
+      }
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 export { APP_NAME, APP_USER_AGENT, APP_VERSION } from './app.js';
 export * from './config/index.js';
 export * from './db/index.js';
+export * from './discovery/index.js';
 export * from './logger/index.js';
+export * from './phone/index.js';
 export * from './result/index.js';

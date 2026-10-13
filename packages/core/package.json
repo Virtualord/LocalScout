@@ -11,7 +11,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "fixtures:generate": "tsx scripts/generate-fixtures.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

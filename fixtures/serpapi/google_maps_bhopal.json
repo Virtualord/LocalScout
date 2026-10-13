@@ -1,0 +1,262 @@
+{
+  "search_metadata": {
+    "id": "localscout-fixture-bhopal",
+    "status": "Success",
+    "processed_at": "2026-10-13 09:00:00 UTC",
+    "total_time_taken": 0.84
+  },
+  "search_parameters": {
+    "engine": "google_maps",
+    "type": "search",
+    "q": "Plumber in Bhopal",
+    "ll": "Bhopal",
+    "gl": "in",
+    "hl": "en"
+  },
+  "search_information": {
+    "local_results_state": "Results for exact spelling",
+    "query_displayed": "Bhopal"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Sharma Plumbing Works",
+      "place_id": "ChIJ000000006fb09ca7df84",
+      "data_id": "0x89c20000b:0x00000000",
+      "gps_coordinates": {
+        "latitude": 23.2312,
+        "longitude": 77.4231
+      },
+      "rating": 4.6,
+      "reviews": 214,
+      "type": "Plumber",
+      "types": ["Plumber"],
+      "address": "MP Nagar, Bhopal",
+      "phone": "+91 98123 45678",
+      "hours": "Open",
+      "website": "https://sharmaplumbing.in/",
+      "links": {
+        "website": "https://sharmaplumbing.in/"
+      }
+    },
+    {
+      "position": 2,
+      "title": "Verma Electricals",
+      "place_id": "ChIJ00000000b490a459853d",
+      "data_id": "0x89c20001b:0x00000001",
+      "gps_coordinates": {
+        "latitude": 23.2401,
+        "longitude": 77.4012
+      },
+      "rating": 4.4,
+      "reviews": 156,
+      "type": "Electrician",
+      "types": ["Electrician"],
+      "address": "Kolar Road, Bhopal",
+      "phone": "+91 90000 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 3,
+      "title": "Gupta Interiors",
+      "place_id": "ChIJ00000000f970ac0b2af6",
+      "data_id": "0x89c20002b:0x00000002",
+      "gps_coordinates": {
+        "latitude": 23.2518,
+        "longitude": 77.4096
+      },
+      "rating": 4.2,
+      "reviews": 87,
+      "type": "Interior designer",
+      "types": ["Interior designer"],
+      "address": "New Market, Bhopal",
+      "phone": "+91 94250 12345",
+      "hours": "Open",
+      "website": "https://guptainteriors.in",
+      "links": {
+        "website": "https://guptainteriors.in"
+      }
+    },
+    {
+      "position": 4,
+      "title": "Patel Coolers & RO",
+      "place_id": "ChIJ000000003e50b3bcd0b0",
+      "data_id": "0x89c20003b:0x00000003",
+      "gps_coordinates": {
+        "latitude": 23.2604,
+        "longitude": 77.4182
+      },
+      "rating": 4.8,
+      "reviews": 342,
+      "type": "Appliance repair service",
+      "types": ["Appliance repair service"],
+      "address": "Bittan Market, Bhopal",
+      "phone": "+91 98930 12345",
+      "hours": "Open",
+      "website": "https://facebook.com/patelcoolers",
+      "links": {
+        "website": "https://facebook.com/patelcoolers"
+      }
+    },
+    {
+      "position": 5,
+      "title": "Sunrise Dental Clinic",
+      "place_id": "ChIJ000000008330bb6e7669",
+      "data_id": "0x89c20004b:0x00000004",
+      "gps_coordinates": {
+        "latitude": 23.2288,
+        "longitude": 77.4391
+      },
+      "rating": 4.9,
+      "reviews": 511,
+      "type": "Dentist",
+      "types": ["Dentist"],
+      "address": "Arera Colony, Bhopal",
+      "phone": "+91 93000 11111",
+      "hours": "Open",
+      "website": "https://sunrisedental.in",
+      "links": {
+        "website": "https://sunrisedental.in"
+      }
+    },
+    {
+      "position": 6,
+      "title": "Khan Carpentry",
+      "place_id": "ChIJ00000000c810c3201c22",
+      "data_id": "0x89c20005b:0x00000005",
+      "gps_coordinates": {
+        "latitude": 23.2671,
+        "longitude": 77.4051
+      },
+      "rating": 4.1,
+      "reviews": 34,
+      "type": "Carpenter",
+      "types": ["Carpenter"],
+      "address": "Old Bhopal",
+      "phone": "+91 99800 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 7,
+      "title": "Royal Caterers",
+      "place_id": "ChIJ000000000cf0cad1c1dc",
+      "data_id": "0x89c20006b:0x00000006",
+      "gps_coordinates": {
+        "latitude": 23.2712,
+        "longitude": 77.4212
+      },
+      "rating": 4.5,
+      "reviews": 128,
+      "type": "Caterer",
+      "types": ["Caterer"],
+      "address": "BHEL, Bhopal",
+      "phone": "+91 93330 12345",
+      "hours": "Open",
+      "website": "https://royalcaterers.in",
+      "links": {
+        "website": "https://royalcaterers.in"
+      }
+    },
+    {
+      "position": 8,
+      "title": "Modern Painters",
+      "place_id": "ChIJ0000000051d0d2836795",
+      "data_id": "0x89c20007b:0x00000007",
+      "gps_coordinates": {
+        "latitude": 23.2455,
+        "longitude": 77.4102
+      },
+      "rating": 3.9,
+      "reviews": 19,
+      "type": "Painting contractor",
+      "types": ["Painting contractor"],
+      "address": "Karkhana, Bhopal",
+      "phone": "+91 97520 12345",
+      "hours": "Open",
+      "website": "https://www.justdial.com/Bhopal/Painters/99887766",
+      "links": {
+        "website": "https://www.justdial.com/Bhopal/Painters/99887766"
+      }
+    },
+    {
+      "position": 9,
+      "title": "Sagar Pest Control",
+      "place_id": "ChIJ0000000096b0da350d4e",
+      "data_id": "0x89c20008b:0x00000008",
+      "gps_coordinates": {
+        "latitude": 23.2199,
+        "longitude": 77.4298
+      },
+      "rating": 4.3,
+      "reviews": 76,
+      "type": "Pest control service",
+      "types": ["Pest control service"],
+      "address": "Ayodhya Nagar, Bhopal",
+      "phone": "+91 91110 12345",
+      "hours": "Open",
+      "website": "https://sagarpest.in",
+      "links": {
+        "website": "https://sagarpest.in"
+      }
+    },
+    {
+      "position": 10,
+      "title": "Deepak Hardware",
+      "place_id": "ChIJ00000000db90e1e6b307",
+      "data_id": "0x89c20009b:0x00000009",
+      "gps_coordinates": {
+        "latitude": 23.2556,
+        "longitude": 77.4078
+      },
+      "rating": 4,
+      "reviews": 45,
+      "type": "Hardware store",
+      "types": ["Hardware store"],
+      "address": "Tatqa Tola, Bhopal",
+      "phone": "+91 98110 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 11,
+      "title": "Aashirwad Tailors",
+      "place_id": "ChIJ0000000055981a5c6eea",
+      "data_id": "0x89c2000ab:0x0000000a",
+      "gps_coordinates": {
+        "latitude": 23.2298,
+        "longitude": 77.4261
+      },
+      "rating": 4.7,
+      "reviews": 233,
+      "type": "Tailor",
+      "types": ["Tailor"],
+      "address": "MP Nagar, Bhopal",
+      "phone": "+91 99220 12345",
+      "hours": "Open",
+      "website": "https://aashirwadtailors.com",
+      "links": {
+        "website": "https://aashirwadtailors.com"
+      }
+    },
+    {
+      "position": 12,
+      "title": "Cool Air Services",
+      "place_id": "ChIJ000000009a78220e14a3",
+      "data_id": "0x89c2000bb:0x0000000b",
+      "gps_coordinates": {
+        "latitude": 23.2561,
+        "longitude": 77.4133
+      },
+      "rating": 4.2,
+      "reviews": 61,
+      "type": "Air conditioning contractor",
+      "types": ["Air conditioning contractor"],
+      "address": "Bhopal",
+      "phone": "+91 99220 54321",
+      "hours": "Open",
+      "website": "https://coolairservices.in",
+      "links": {
+        "website": "https://coolairservices.in"
+      }
+    }
+  ]
+}
