@@ -1,0 +1,44 @@
+{
+  "name": "localscout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first agent that finds local businesses, audits their websites, and drafts honest outreach.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@11.8.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @localscout/api --filter @localscout/web dev",
+    "dev:api": "pnpm --filter @localscout/api dev",
+    "dev:web": "pnpm --filter @localscout/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:slow": "vitest run --config vitest.slow.config.ts",
+    "eval": "pnpm --filter @localscout/eval start",
+    "db:generate": "pnpm --filter @localscout/core db:generate",
+    "db:migrate": "pnpm --filter @localscout/core db:migrate",
+    "cli": "pnpm --filter @localscout/api cli",
+    "e2e": "pnpm --filter @localscout/web test:e2e",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.12.0",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2"
+  }
+}
