@@ -9,7 +9,16 @@ export default defineConfig({
       'apps/*/src/**/*.test.ts',
       'apps/*/src/**/*.test.tsx',
     ],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/*.e2e.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**',
+      '**/*.e2e.ts',
+      // `*.slow.test.ts` needs a real Chrome and real wall-clock time. It runs
+      // under `pnpm test:slow`, never here, and the exclusion is explicit so a
+      // slow test cannot quietly join the fast run.
+      '**/*.slow.test.ts',
+    ],
     environment: 'node',
     // Component suites opt into jsdom with a `@vitest-environment jsdom` docblock.
     setupFiles: ['./vitest.setup.ts'],
