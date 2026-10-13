@@ -23,6 +23,7 @@ export default {
         'web',
         'eval',
         'docs',
+        'adr',
         'ci',
         'deps',
       ],

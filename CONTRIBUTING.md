@@ -50,7 +50,7 @@ Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`,
 `chore`, `revert`.
 
 Scopes: `repo`, `tooling`, `core`, `db`, `discovery`, `audit`, `draft`,
-`workflow`, `api`, `web`, `eval`, `docs`, `ci`, `deps`.
+`workflow`, `api`, `web`, `eval`, `docs`, `adr`, `ci`, `deps`.
 
 Rules: imperative mood, subject at most 72 characters, no trailing period. The
 body explains **why** when the change is not self-evident. Use a
