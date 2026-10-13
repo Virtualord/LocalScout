@@ -217,8 +217,23 @@ function LeadSquare({
         width: cellWidth * 0.78,
         height: cellHeight * 0.78,
         backgroundColor: leadCellColor(lead),
-        ...(dropIn ? { animation: 'lead-drop-in 220ms var(--ease-out)' } : {}),
-        ...(recolor ? { animation: 'audit-recolor 240ms steps(2)' } : {}),
+        // Longhand properties rather than the `animation` shorthand: the
+        // reduced-motion rule sets `animation: none`, and React warns when a
+        // rerender changes a shorthand that a longhand elsewhere also touches.
+        ...(dropIn
+          ? {
+              animationName: 'lead-drop-in',
+              animationDuration: '220ms',
+              animationTimingFunction: 'var(--ease-out)',
+            }
+          : {}),
+        ...(recolor
+          ? {
+              animationName: 'audit-recolor',
+              animationDuration: '240ms',
+              animationTimingFunction: 'steps(2)',
+            }
+          : {}),
       }}
       onMouseEnter={(event) => {
         // 2px paper outline on hover, from the motion table.

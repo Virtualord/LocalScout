@@ -64,6 +64,14 @@ export interface LeadWithScore extends Lead {
   draftCount: number;
   /** True when the business has a mobile number, so WhatsApp is available. */
   canWhatsApp: boolean;
+  /**
+   * SQLite's insertion order.
+   *
+   * Exists purely to break ties in the "newest" sort. A run discovers a dozen
+   * leads inside the same millisecond, so `createdAt` alone cannot order them,
+   * and a random tie-break means reloading the page reshuffles the list.
+   */
+  rowid: number;
 }
 
 export class LeadRepository {
@@ -237,25 +245,13 @@ export class LeadRepository {
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .all();
 
-    const scores = this.latestAuditScores();
-    const draftCounts = this.draftCounts();
-
-    let enriched: LeadWithScore[] = rows.map((row) => {
-      const audit = scores.get(row.id);
-      return {
-        ...row,
-        opportunityScore: audit?.score ?? null,
-        auditStatus: audit?.status ?? null,
-        auditId: audit?.id ?? null,
-        draftCount: draftCounts.get(row.id) ?? 0,
-        canWhatsApp: row.phoneIsMobile === true,
-      };
-    });
+    let enriched = this.enrich(rows);
 
     // minScore filters on the latest audit, which is a join, so it applies here.
     if (filters.minScore !== undefined) {
+      const min = filters.minScore;
       enriched = enriched.filter(
-        (lead) => lead.opportunityScore !== null && lead.opportunityScore >= filters.minScore!,
+        (lead) => lead.opportunityScore !== null && lead.opportunityScore >= min,
       );
     }
 
@@ -264,6 +260,54 @@ export class LeadRepository {
     const offset = filters.offset ?? 0;
     const limit = filters.limit ?? 50;
     return enriched.slice(offset, offset + limit);
+  }
+
+  /**
+   * Attach the derived fields to raw lead rows.
+   *
+   * The list endpoint and the single-lead endpoint must agree: a lead that
+   * shows a score in the grid but a blank in its own modal is exactly the kind
+   * of inconsistency that makes a person distrust the whole number.
+   */
+  private enrich(rows: Lead[]): LeadWithScore[] {
+    const scores = this.latestAuditScores();
+    const draftCounts = this.draftCounts();
+    const rowids = this.rowIds();
+
+    return rows.map((row) => {
+      const audit = scores.get(row.id);
+      return {
+        ...row,
+        opportunityScore: audit?.score ?? null,
+        auditStatus: audit?.status ?? null,
+        auditId: audit?.id ?? null,
+        draftCount: draftCounts.get(row.id) ?? 0,
+        canWhatsApp: row.phoneIsMobile === true,
+        rowid: rowids.get(row.id) ?? 0,
+      };
+    });
+  }
+
+  /** Insertion order, keyed by lead id. Used only to break sort ties. */
+  private rowIds(): Map<string, number> {
+    const rows = this.db
+      .select({ id: leads.id, rowid: sql<number>`rowid` })
+      .from(leads)
+      .all();
+    return new Map(rows.map((row) => [row.id, row.rowid]));
+  }
+
+  /**
+   * One lead, with the same derived fields the list endpoint returns.
+   *
+   * Distinct from `byId`, which returns the raw stored row for internal callers
+   * that need the columns exactly.
+   */
+  async summaryById(id: string): Promise<LeadWithScore | undefined> {
+    const row = this.db.select().from(leads).where(eq(leads.id, id)).get();
+    if (row === undefined) return undefined;
+    const enriched = this.enrich([row]);
+    return enriched[0];
   }
 
   async countByStatus(): Promise<Record<LeadStatus, number>> {
@@ -378,8 +422,7 @@ function sortLeads(rows: LeadWithScore[], sort: NonNullable<LeadFilters['sort']>
   const sorted = [...rows];
 
   // One comparator, not a sequence of sorts: a second sort() call would
-  // discard the primary ordering. The id tie-break keeps pagination stable
-  // when scores or timestamps collide.
+  // discard the primary ordering.
   sorted.sort((a, b) => {
     switch (sort) {
       case 'score': {
@@ -390,7 +433,10 @@ function sortLeads(rows: LeadWithScore[], sort: NonNullable<LeadFilters['sort']>
       case 'newest': {
         const delta = b.createdAt.getTime() - a.createdAt.getTime();
         if (delta !== 0) return delta;
-        break;
+        // Same millisecond, which is the normal case for one run's worth of
+        // leads. Insertion order is what "newest" actually means here; falling
+        // through to the id tie-break would reshuffle the list on every reload.
+        return b.rowid - a.rowid;
       }
       case 'name': {
         const delta = a.name.localeCompare(b.name);
@@ -398,6 +444,7 @@ function sortLeads(rows: LeadWithScore[], sort: NonNullable<LeadFilters['sort']>
         break;
       }
     }
+    // The id tie-break keeps pagination stable when scores or names collide.
     return a.id.localeCompare(b.id);
   });
 

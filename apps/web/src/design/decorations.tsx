@@ -214,10 +214,6 @@ export function RouteLoader({ size = 40 }: { size?: number }) {
     return () => clearTimeout(timer);
   }, []);
 
-  const animation = reduceMotion
-    ? undefined
-    : `loader-bob 1000ms ease-in-out ${visible ? 'infinite' : 'paused'}`;
-
   return (
     <div
       className="flex items-center justify-center gap-0 py-16"
@@ -232,9 +228,22 @@ export function RouteLoader({ size = 40 }: { size?: number }) {
               width: size,
               height: size,
               backgroundColor: colour,
-              animation,
-              // 100ms stagger produces the left-to-right wave.
-              animationDelay: reduceMotion ? undefined : `${index * 100}ms`,
+              /*
+               * Longhand properties rather than the `animation` shorthand.
+               * Setting a shorthand alongside `animationDelay` makes React
+               * warn on rerender, because the shorthand resets the delay and
+               * the two properties fight.
+               */
+              ...(reduceMotion
+                ? {}
+                : {
+                    animationName: 'loader-bob',
+                    animationDuration: '1000ms',
+                    animationTimingFunction: 'ease-in-out',
+                    animationIterationCount: visible ? 'infinite' : 'paused',
+                    // 100ms stagger produces the left-to-right wave.
+                    animationDelay: `${index * 100}ms`,
+                  }),
             }}
           />
         ))}

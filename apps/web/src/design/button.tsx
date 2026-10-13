@@ -29,6 +29,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** Render as the single child element instead of a `<button>`. */
   asChild?: boolean;
+  /**
+   * Disable the button and mark it busy.
+   *
+   * Used wherever a click starts work: an audit takes seconds, and a button
+   * that looks live while a request is in flight is how a freelance developer
+   * runs the same audit six times.
+   */
+  busy?: boolean;
   children?: ReactNode;
 }
 
@@ -39,7 +47,16 @@ const SIZES: Record<ButtonSize, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', asChild = false, className = '', children, ...rest },
+  {
+    variant = 'primary',
+    size = 'md',
+    asChild = false,
+    busy = false,
+    className = '',
+    children,
+    disabled,
+    ...rest
+  },
   ref,
 ) {
   const Component = asChild ? Slot : 'button';
@@ -48,6 +65,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <Component
       ref={ref}
       className={['btn', `btn-${variant}`, SIZES[size], className].filter(Boolean).join(' ')}
+      aria-busy={busy || undefined}
+      disabled={busy ? true : disabled}
       {...rest}
     >
       {children}

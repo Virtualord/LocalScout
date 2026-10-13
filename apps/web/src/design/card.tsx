@@ -1,4 +1,4 @@
-import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type AnchorHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 
 /**
  * Cards.
@@ -52,25 +52,42 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
  * Always the last item in a grid. It is visually lighter than a real lead so it
  * never reads as one, while keeping the same footprint so the grid stays even.
  */
+/** The dashed card's appearance, shared by the button and the link form. */
+const DASHED_CTA_CLASSES = [
+  'w-full border border-dashed border-ink bg-transparent p-6 text-left',
+  'display-card text-ink',
+  'transition-colors duration-[--dur-fast]',
+  'hover:bg-paper',
+].join(' ');
+
 export const DashedCtaCard = forwardRef<HTMLButtonElement, HTMLAttributes<HTMLButtonElement>>(
   function DashedCtaCard({ className = '', children, ...rest }, ref) {
     return (
       <button
         ref={ref}
         type="button"
-        className={[
-          'w-full border border-dashed border-ink bg-transparent p-6 text-left',
-          'display-card text-ink',
-          'cursor-pointer transition-colors duration-[--dur-fast]',
-          'hover:bg-paper',
-          className,
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        className={[DASHED_CTA_CLASSES, 'cursor-pointer', className].filter(Boolean).join(' ')}
         {...(rest as HTMLAttributes<HTMLButtonElement>)}
       >
         {children}
       </button>
+    );
+  },
+);
+
+/**
+ * The dashed card as a link.
+ *
+ * The same shape, but it goes somewhere. A "run another search" card that is a
+ * button with no handler is a dead control, which is the one thing a card in a
+ * grid must not be.
+ */
+export const DashedCtaLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement>>(
+  function DashedCtaLink({ className = '', children, ...rest }, ref) {
+    return (
+      <a ref={ref} className={[DASHED_CTA_CLASSES, className].filter(Boolean).join(' ')} {...rest}>
+        {children}
+      </a>
     );
   },
 );

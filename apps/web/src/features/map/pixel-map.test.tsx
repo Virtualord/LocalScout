@@ -162,18 +162,18 @@ describe('PixelMap', () => {
     const { rerender } = render(<PixelMap leads={leads} recentlyDiscoveredIds={new Set(['a'])} />);
 
     const squares = screen.getAllByRole('button');
-    expect(squares[0]?.getAttribute('style')).toContain('lead-drop-in');
+    expect(squares[0]?.getAttribute('style')).toContain('animation-name: lead-drop-in');
 
     rerender(<PixelMap leads={leads} recentlyDiscoveredIds={new Set()} />);
     for (const square of screen.getAllByRole('button')) {
-      expect(square.getAttribute('style') ?? '').not.toContain('lead-drop-in');
+      expect(square.getAttribute('style') ?? '').not.toContain('animation-name: lead-drop-in');
     }
   });
 
   it('applies the recolour flash only to a freshly audited lead', () => {
     render(<PixelMap leads={leads} recentlyAuditedIds={new Set(['b'])} />);
     const squares = screen.getAllByRole('button');
-    expect(squares[1]?.getAttribute('style')).toContain('audit-recolor');
+    expect(squares[1]?.getAttribute('style')).toContain('animation-name: audit-recolor');
   });
 
   it('marks the canvas as decorative, since the buttons carry the names', () => {
