@@ -86,7 +86,7 @@ export function SearchField({
   onChange: (value: string) => void;
   onSubmit: () => void;
   placeholder?: string;
-  error?: string;
+  error?: string | undefined;
   buttonLabel?: string;
   busy?: boolean;
   id?: string;
