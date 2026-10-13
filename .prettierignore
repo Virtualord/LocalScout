@@ -1,0 +1,11 @@
+dist
+build
+coverage
+node_modules
+pnpm-lock.yaml
+playwright-report
+test-results
+data
+ref
+eval/results
+*.log

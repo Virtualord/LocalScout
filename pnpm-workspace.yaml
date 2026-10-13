@@ -1,0 +1,19 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+  - 'eval'
+
+autoInstallPeers: true
+strictPeerDependencies: false
+
+# pnpm 11 gates installs behind a release-age window by default, which made
+# clean installs non-reproducible. The lockfile already pins exact versions,
+# so the extra delay only slows CI down without adding safety here.
+minimumReleaseAge: 0
+minimumReleaseAgeStrict: false
+
+# Native modules that are allowed to run their install scripts.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  unrs-resolver: true
