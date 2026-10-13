@@ -23,6 +23,7 @@ export function DialogContent({
   footer,
   className = '',
   size = 'md',
+  onCloseAutoFocus,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -30,11 +31,20 @@ export function DialogContent({
   footer?: ReactNode;
   className?: string;
   size?: 'md' | 'lg';
+  /**
+   * Where focus goes when the modal closes.
+   *
+   * Radix's default restores focus to the trigger. A modal opened from a plain
+   * button has no trigger, so callers that open it from somewhere else need to
+   * say where focus belongs. Call `event.preventDefault()` and focus the target.
+   */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="dialog-overlay fixed inset-0 z-50" />
       <DialogPrimitive.Content
+        onCloseAutoFocus={onCloseAutoFocus}
         className={[
           'dialog-panel fixed left-1/2 top-1/2 z-50 w-[min(94vw,1000px)] -translate-x-1/2 -translate-y-1/2',
           size === 'lg' ? 'max-h-[88vh]' : 'max-h-[86vh]',
@@ -45,7 +55,19 @@ export function DialogContent({
           .filter(Boolean)
           .join(' ')}
       >
-        <header className="flex items-start justify-between gap-4">
+        {/*
+          The large variant drops the outer padding so a lead card inside it can
+          sit flush against the border. The header therefore supplies its own
+          padding, or the title touches the top edge.
+        */}
+        <header
+          className={[
+            'flex items-start justify-between gap-4',
+            size === 'lg' ? 'px-7 pb-5 pt-6' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           <div className="min-w-0">
             <DialogPrimitive.Title className="display text-3xl text-ink">
               {title}
