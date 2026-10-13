@@ -1,0 +1,15 @@
+# Normalize line endings for text files in the repository.
+* text=auto eol=lf
+
+# Keep binary assets untouched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.webp binary
+*.pdf binary
+*.mp4 binary
