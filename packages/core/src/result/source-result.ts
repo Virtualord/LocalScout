@@ -97,21 +97,21 @@ export function sourceResult<T>(input: SourceResultInput<T>): SourceResult<T> {
     ...(input.degradedBy && input.degradedBy.length > 0 ? { degradedBy: input.degradedBy } : {}),
   };
 
-  const hasValue = input.value !== undefined;
-  const hasError = input.error !== undefined;
-
-  // An `ok` result must not carry an error: that combination hides a failure.
-  if (input.status === 'ok' && hasValue && !hasError) {
+  // The inline `undefined` checks are load-bearing: TypeScript narrows the
+  // optional `value` and `error` properties to their non-optional forms only
+  // when they are tested directly. Assigning them to a local boolean first
+  // defeats that narrowing and the returned union no longer type-checks.
+  if (input.status === 'ok' && input.value !== undefined && input.error === undefined) {
     return { status: 'ok', kind: input.kind, value: input.value, meta };
   }
 
-  if (input.status === 'stale' && hasValue && hasError) {
+  if (input.status === 'stale' && input.value !== undefined && input.error !== undefined) {
     return { status: 'stale', kind: input.kind, value: input.value, meta, error: input.error };
   }
 
   // An `unavailable` result must not carry a value: presenting partial data as
   // "nothing came back" is the exact confusion this type exists to prevent.
-  if (input.status === 'unavailable' && hasError && !hasValue) {
+  if (input.status === 'unavailable' && input.error !== undefined && input.value === undefined) {
     return { status: 'unavailable', kind: input.kind, meta, error: input.error };
   }
 
@@ -120,7 +120,7 @@ export function sourceResult<T>(input: SourceResultInput<T>): SourceResult<T> {
       (input.status === 'unavailable' ? 'an error and no value' : 'a value') +
       (input.status === 'stale' ? ' plus an error describing what degraded' : '') +
       (input.status === 'ok' ? ' and no error' : '') +
-      `. Received value: ${hasValue ? 'present' : 'missing'}, error: ${hasError ? 'present' : 'missing'}.`,
+      `. Received value: ${input.value !== undefined ? 'present' : 'missing'}, error: ${input.error !== undefined ? 'present' : 'missing'}.`,
   );
 }
 
