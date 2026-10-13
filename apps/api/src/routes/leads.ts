@@ -78,7 +78,10 @@ export function registerLeadRoutes(app: Hono, runtime: AppRuntime): void {
   });
 
   app.get('/api/leads/:id', async (c) => {
-    const lead = await repos.leads.byId(c.req.param('id'));
+    // `summaryById`, not `byId`: the single-lead response has to carry the same
+    // score, status and WhatsApp flag as the list, or a lead shows a number in
+    // the grid and a blank in its own modal.
+    const lead = await repos.leads.summaryById(c.req.param('id'));
     if (!lead) return c.json({ error: `No lead with id ${c.req.param('id')}.` }, 404);
 
     const [audit, drafts, log, counts] = await Promise.all([

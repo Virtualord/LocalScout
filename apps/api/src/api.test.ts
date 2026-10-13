@@ -258,12 +258,15 @@ describe('api', () => {
   });
 
   describe('leads', () => {
-    const seed = async (over: { name?: string; website?: string; domain?: string } = {}) =>
+    const seed = async (
+      over: { name?: string; website?: string; domain?: string; mobile?: boolean } = {},
+    ) =>
       runtime.repos.leads.insert({
         placeId: `p_${Math.random().toString(36).slice(2)}`,
         name: over.name ?? 'Test Plumbing',
         websiteUrl: over.website,
         domainKey: over.domain,
+        phoneIsMobile: over.mobile === true ? true : undefined,
       });
 
     it('lists leads with a total', async () => {
@@ -340,6 +343,54 @@ describe('api', () => {
 
     it('404s for an unknown lead', async () => {
       expect((await get('/api/leads/nope')).status).toBe(404);
+    });
+
+    /*
+     * The single-lead endpoint returned the raw row, so the modal showed a
+     * blank score for a lead the grid had scored 42. The two shapes must not
+     * drift apart.
+     */
+    it('returns the same derived fields as the list endpoint', async () => {
+      const lead = await seed({ name: 'Contract Co', mobile: true });
+      await runtime.repos.audits.create({
+        leadId: lead.id,
+        status: 'ok',
+        startedAt: new Date(),
+        durationMs: 100,
+        metrics: { lcp_ms: 6100 },
+        checks: [],
+        findings: [],
+        opportunityScore: 42,
+      });
+
+      const detail = (await (await get(`/api/leads/${lead.id}`)).json()) as {
+        lead: {
+          opportunityScore: number | null;
+          auditStatus: string | null;
+          canWhatsApp: boolean;
+          draftCount: number;
+        };
+      };
+      const list = (await (await get('/api/leads?sort=score')).json()) as {
+        leads: { id: string; opportunityScore: number | null }[];
+      };
+      const listed = list.leads.find((entry) => entry.id === lead.id);
+
+      expect(detail.lead.opportunityScore).toBe(42);
+      expect(detail.lead.opportunityScore).toBe(listed?.opportunityScore);
+      expect(detail.lead.auditStatus).toBe('ok');
+      expect(detail.lead.canWhatsApp).toBe(true);
+      expect(detail.lead.draftCount).toBe(0);
+    });
+
+    it('reports nulls on the detail endpoint for an unaudited lead', async () => {
+      const lead = await seed({ name: 'Unaudited Co' });
+      const detail = (await (await get(`/api/leads/${lead.id}`)).json()) as {
+        lead: { opportunityScore: number | null; auditStatus: string | null };
+      };
+
+      expect(detail.lead.opportunityScore).toBeNull();
+      expect(detail.lead.auditStatus).toBeNull();
     });
 
     it('updates notes and status', async () => {
