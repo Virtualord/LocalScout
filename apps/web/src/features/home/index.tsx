@@ -2,9 +2,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { SearchField } from '../../design/input.js';
+import { LeadModal } from '../leads/lead-modal.js';
 import { PixelMap } from '../map/index.js';
 import type { MapLead } from '../map/index.js';
-import { api, subscribeToRun, type LeadSummary, type RunEvent } from '../../lib/api.js';
+import { api, subscribeToRun, type RunEvent } from '../../lib/api.js';
 import { queryKeys } from '../../lib/query-keys.js';
 
 /**
@@ -27,7 +28,7 @@ export function Home() {
   const [error, setError] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | undefined>(undefined);
-  const [lead, setLead] = useState<LeadSummary | undefined>(undefined);
+  const [leadId, setLeadId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const unsubscribeRef = useRef<(() => void) | undefined>(undefined);
@@ -167,7 +168,7 @@ export function Home() {
         <div className="mt-8">
           <PixelMap
             leads={mapLeads}
-            onSelect={(id) => setLead(leads.find((entry) => entry.id === id))}
+            onSelect={setLeadId}
             recentlyDiscoveredIds={recentlyDiscovered}
             recentlyAuditedIds={recentlyAudited}
           />
@@ -180,12 +181,17 @@ export function Home() {
           >
             See every lead
           </Link>
-          <a
-            href="/leads?demo=1"
+          {/*
+            No demo-data link: fixtures mode is already the default when no
+            SerpApi key is set, so there is nothing extra to switch on. A link
+            to a query parameter nothing reads would be a dead control.
+          */}
+          <Link
+            to="/styleguide"
             className="mono text-[12px] uppercase tracking-wider text-paper/70 underline decoration-coral/50 decoration-2 underline-offset-4"
           >
-            No SerpApi key yet? Explore with demo data
-          </a>
+            See the design system
+          </Link>
         </div>
 
         {/* Footer strip, pinned to the bottom of the first viewport. */}
@@ -197,20 +203,18 @@ export function Home() {
         </div>
       </section>
 
-      {lead && (
-        <div className="border-t border-ink bg-paper">
-          <div className="container py-8">
-            <p className="eyebrow text-ink/60">Selected</p>
-            <h2 className="display text-3xl text-ink">{lead.name}</h2>
-            <p className="mt-2 text-[14px] text-ink/70">{lead.address ?? 'No address recorded'}</p>
-            <div className="mt-5">
-              <Link to={`/leads?lead=${lead.id}`} className="btn btn-primary btn-md">
-                Open lead
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      {/*
+          Clicking a square opens the same modal the leads screen uses, rather
+          than a summary band below the map. Two ways to review the same lead
+          should not produce two different views of it.
+        */}
+      <LeadModal
+        leadId={leadId}
+        onClose={() => setLeadId(null)}
+        onOpenChange={(open) => {
+          if (!open) setLeadId(null);
+        }}
+      />
     </div>
   );
 }
