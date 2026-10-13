@@ -7,5 +7,6 @@ export * from './draft/index.js';
 export * from './eval/index.js';
 export * from './logger/index.js';
 export * from './phone/index.js';
+export * from './pipeline/index.js';
 export * from './result/index.js';
 export * from './scoring/index.js';

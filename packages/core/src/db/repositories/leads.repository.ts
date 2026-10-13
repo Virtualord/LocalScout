@@ -7,9 +7,11 @@ import {
   drafts as draftsRef,
   LEAD_STATUSES,
   leads,
+  savedSearches,
   type Lead,
   type LeadStatus,
   type NewLead,
+  type SavedSearch,
 } from '../schema.js';
 
 /**
@@ -287,6 +289,20 @@ export class LeadRepository {
       .from(leads)
       .get();
     return row?.count ?? 0;
+  }
+
+  /**
+   * Saved searches that carry a schedule.
+   *
+   * Rows with a null `cron` are manual searches and are not returned, because
+   * the scheduler has nothing to register for them.
+   */
+  async scheduled(): Promise<SavedSearch[]> {
+    return this.db
+      .select()
+      .from(savedSearches)
+      .where(sql`${savedSearches.cron} IS NOT NULL`)
+      .all();
   }
 
   async setStatus(id: string, status: LeadStatus, skipReason?: string): Promise<Lead> {
