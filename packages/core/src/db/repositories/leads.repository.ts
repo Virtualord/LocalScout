@@ -276,9 +276,20 @@ export class LeadRepository {
 
     return rows.map((row) => {
       const audit = scores.get(row.id);
+
+      /*
+       * An `unavailable` audit is a record of a failed attempt, not a
+       * measurement. The column is NOT NULL so a row can exist at all, and its
+       * value is meaningless for one of these, so the score is surfaced as null
+       * rather than as a zero that would rank the lead as the coldest in the
+       * list. The audit status still comes through, so the UI can say the site
+       * could not be reached.
+       */
+      const measured = audit !== undefined && audit.status !== 'unavailable';
+
       return {
         ...row,
-        opportunityScore: audit?.score ?? null,
+        opportunityScore: measured ? audit.score : null,
         auditStatus: audit?.status ?? null,
         auditId: audit?.id ?? null,
         draftCount: draftCounts.get(row.id) ?? 0,
