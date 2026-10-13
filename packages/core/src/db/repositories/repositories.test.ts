@@ -113,6 +113,80 @@ describe('repositories', () => {
       });
     });
 
+    describe('summaryById', () => {
+      /*
+       * The single-lead endpoint used the raw row, so a lead showed a score in
+       * the list grid and a blank in its own modal. These pin that the two
+       * shapes cannot drift apart again.
+       */
+      it('returns the same score as the list endpoint', async () => {
+        const lead = await seedLead({ name: 'Scored Co' });
+        await seedAudit(lead.id, 73);
+
+        const summary = await repos.leads.summaryById(lead.id);
+        const [listed] = await repos.leads.list();
+
+        expect(summary?.opportunityScore).toBe(73);
+        expect(summary?.opportunityScore).toBe(listed?.opportunityScore);
+      });
+
+      it('returns the audit status and id, not just the score', async () => {
+        const lead = await seedLead();
+        const audit = await seedAudit(lead.id, 40, 'stale');
+
+        const summary = await repos.leads.summaryById(lead.id);
+        expect(summary?.auditStatus).toBe('stale');
+        expect(summary?.auditId).toBe(audit.id);
+      });
+
+      it('reports the WhatsApp flag from the phone type', async () => {
+        const mobile = await seedLead({ name: 'Mobile', phoneIsMobile: true });
+        const landline = await seedLead({ name: 'Landline', phoneIsMobile: false });
+
+        expect((await repos.leads.summaryById(mobile.id))?.canWhatsApp).toBe(true);
+        expect((await repos.leads.summaryById(landline.id))?.canWhatsApp).toBe(false);
+      });
+
+      it('counts the drafts for the lead', async () => {
+        const lead = await seedLead();
+        await repos.drafts.create({
+          leadId: lead.id,
+          language: 'en',
+          whatsappText: 'hello',
+          generatedBy: 'fallback',
+          tokensIn: 0,
+          tokensOut: 0,
+          latencyMs: 0,
+          grounded: true,
+          validationErrors: [],
+        });
+
+        expect((await repos.leads.summaryById(lead.id))?.draftCount).toBe(1);
+      });
+
+      it('reports nulls for an unaudited lead rather than zeros', async () => {
+        const lead = await seedLead({ name: 'Never Audited' });
+        const summary = await repos.leads.summaryById(lead.id);
+
+        expect(summary?.opportunityScore).toBeNull();
+        expect(summary?.auditStatus).toBeNull();
+        expect(summary?.auditId).toBeNull();
+      });
+
+      it('returns undefined for an unknown id', async () => {
+        expect(await repos.leads.summaryById('does-not-exist')).toBeUndefined();
+      });
+
+      it('still returns the stored columns the raw reader returns', async () => {
+        const lead = await seedLead({ name: 'Column Check', address: 'Zone 1' });
+        const summary = await repos.leads.summaryById(lead.id);
+
+        expect(summary?.name).toBe('Column Check');
+        expect(summary?.address).toBe('Zone 1');
+        expect(summary?.status).toBe('discovered');
+      });
+    });
+
     describe('listing with the latest audit score', () => {
       it('sorts by the newest audit, not the oldest', async () => {
         const lead = await seedLead({ name: 'Multi Audit Co' });
@@ -176,6 +250,32 @@ describe('repositories', () => {
 
         const byNewest = await repos.leads.list({ sort: 'newest' });
         expect(byNewest[0]?.name).toBe('Zulu');
+      });
+
+      /*
+       * A run writes a dozen leads inside the same millisecond, so `createdAt`
+       * alone cannot order them. Before the rowid tie-break this was a coin
+       * flip against a random UUID, which is why the suite was intermittently
+       * red and the "Newest" list reshuffled on every reload.
+       */
+      it('breaks same-millisecond ties by insertion order, newest first', async () => {
+        const names = ['First', 'Second', 'Third', 'Fourth', 'Fifth'];
+        for (const name of names) {
+          await seedLead({ name });
+        }
+
+        const rows = await repos.leads.list({ sort: 'newest' });
+        expect(rows.map((row) => row.name)).toEqual([...names].reverse());
+      });
+
+      it('is stable across repeated reads', async () => {
+        for (let i = 0; i < 6; i += 1) {
+          await seedLead({ name: `Bulk ${i}` });
+        }
+
+        const first = (await repos.leads.list({ sort: 'newest' })).map((row) => row.id);
+        const second = (await repos.leads.list({ sort: 'newest' })).map((row) => row.id);
+        expect(second).toEqual(first);
       });
 
       it('reports whether WhatsApp is available from the mobile flag', async () => {
