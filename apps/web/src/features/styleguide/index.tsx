@@ -418,7 +418,7 @@ const SAMPLE_LEAD: LeadSummary = {
   address: 'Zone 1, MP Nagar, Bhopal',
   lat: 23.24,
   lng: 77.41,
-  phone: '+91 98XX XXX XXX',
+  phone: '+91 98123 45678',
   phoneE164: '+919800000000',
   phoneIsMobile: true,
   websiteUrl: 'https://example.com',
