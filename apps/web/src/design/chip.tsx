@@ -72,10 +72,38 @@ export function tierForScore(
   return 'cold';
 }
 
-export function TierChip({ score }: { score: number | null | undefined }) {
+/**
+ * The tier label for a lead.
+ *
+ * Three distinct no-score states, because collapsing them would repeat the exact
+ * lie this project is built to avoid:
+ *
+ * - no audit row at all: nobody has looked yet.
+ * - an `unavailable` audit: somebody looked and could not reach the site.
+ * - a score of null with no stated reason: treated as not audited, which is what
+ *   an unaudited lead actually is.
+ */
+export function tierLabel(
+  score: number | null | undefined,
+  auditStatus: 'ok' | 'stale' | 'unavailable' | null | undefined,
+): string {
+  if (score !== null && score !== undefined) {
+    const tier = tierForScore(score);
+    return tier === 'hot' ? 'Hot' : tier === 'warm' ? 'Warm' : 'Cold';
+  }
+  return auditStatus === 'unavailable' ? 'Not checked' : 'Not audited';
+}
+
+export function TierChip({
+  score,
+  auditStatus,
+}: {
+  score: number | null | undefined;
+  /** Distinguishes "never audited" from "the site could not be reached". */
+  auditStatus?: 'ok' | 'stale' | 'unavailable' | null | undefined;
+}) {
   const tier = tierForScore(score);
-  const label =
-    tier === 'unknown' ? 'Not audited' : tier === 'hot' ? 'Hot' : tier === 'warm' ? 'Warm' : 'Cold';
+  const label = tierLabel(score, auditStatus);
 
   return <Chip variant={tier === 'hot' ? 'hot' : 'neutral'}>{label}</Chip>;
 }

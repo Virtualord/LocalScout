@@ -168,7 +168,7 @@ function LeadModalBody({
        */}
       <div className="border-b border-ink/15 bg-paper-band px-7 py-5">
         <div className="flex flex-wrap items-center gap-2">
-          <TierChip score={data.lead.opportunityScore} />
+          <TierChip score={data.lead.opportunityScore} auditStatus={data.lead.auditStatus} />
           <StatusChip status={data.lead.status} />
           {data.lead.canWhatsApp && <Chip variant="neutral">WhatsApp</Chip>}
           <div className="ml-auto">

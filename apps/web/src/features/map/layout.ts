@@ -320,7 +320,14 @@ export function leadCellColor(lead: PlacedLead): string {
 
 /** The accessible label for a lead square. */
 export function leadCellLabel(lead: PlacedLead): string {
-  if (lead.score === null) return `${lead.name}, not audited`;
+  if (lead.score === null) {
+    // Same distinction as the tier chip: an unreachable site is not an
+    // unaudited one, and a screen reader user deserves the same information a
+    // sighted user gets from the dashed outline.
+    return lead.auditStatus === 'unavailable'
+      ? `${lead.name}, site could not be reached`
+      : `${lead.name}, not audited`;
+  }
   return `${lead.name}, opportunity ${lead.score}`;
 }
 
