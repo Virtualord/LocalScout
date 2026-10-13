@@ -1,0 +1,262 @@
+{
+  "search_metadata": {
+    "id": "localscout-fixture-jaipur",
+    "status": "Success",
+    "processed_at": "2026-10-13 09:00:00 UTC",
+    "total_time_taken": 0.84
+  },
+  "search_parameters": {
+    "engine": "google_maps",
+    "type": "search",
+    "q": "Plumber in Jaipur",
+    "ll": "Jaipur",
+    "gl": "in",
+    "hl": "en"
+  },
+  "search_information": {
+    "local_results_state": "Results for exact spelling",
+    "query_displayed": "Jaipur"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Pink City Plumbers",
+      "place_id": "ChIJ00000000ec7cde0b8208",
+      "data_id": "0x89c20000b:0x00000000",
+      "gps_coordinates": {
+        "latitude": 26.9124,
+        "longitude": 75.7873
+      },
+      "rating": 4.7,
+      "reviews": 312,
+      "type": "Plumber",
+      "types": ["Plumber"],
+      "address": "C-Scheme, Jaipur",
+      "phone": "+91 98290 12345",
+      "hours": "Open",
+      "website": "https://pinkcityplumbers.in",
+      "links": {
+        "website": "https://pinkcityplumbers.in"
+      }
+    },
+    {
+      "position": 2,
+      "title": "Hawa Mahal Interiors",
+      "place_id": "ChIJ00000000315ce5bd27c2",
+      "data_id": "0x89c20001b:0x00000001",
+      "gps_coordinates": {
+        "latitude": 26.9178,
+        "longitude": 75.8012
+      },
+      "rating": 4.4,
+      "reviews": 121,
+      "type": "Interior designer",
+      "types": ["Interior designer"],
+      "address": "Badi Chaupar, Jaipur",
+      "phone": "+91 94140 12345",
+      "hours": "Open",
+      "website": "https://hawamahalinteriors.in",
+      "links": {
+        "website": "https://hawamahalinteriors.in"
+      }
+    },
+    {
+      "position": 3,
+      "title": "Marble King",
+      "place_id": "ChIJ00000000763ced6ecd7b",
+      "data_id": "0x89c20002b:0x00000002",
+      "gps_coordinates": {
+        "latitude": 26.9045,
+        "longitude": 75.8012
+      },
+      "rating": 4.6,
+      "reviews": 265,
+      "type": "Marble contractor",
+      "types": ["Marble contractor"],
+      "address": "M.I. Road, Jaipur",
+      "phone": "+91 99280 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 4,
+      "title": "Gokul Sweets & Namkeen",
+      "place_id": "ChIJ00000000bb1cf5207334",
+      "data_id": "0x89c20003b:0x00000003",
+      "gps_coordinates": {
+        "latitude": 26.9167,
+        "longitude": 75.7998
+      },
+      "rating": 4.8,
+      "reviews": 891,
+      "type": "Confectionery",
+      "types": ["Confectionery"],
+      "address": "Johari Bazaar, Jaipur",
+      "phone": "+91 93140 12345",
+      "hours": "Open",
+      "website": "https://www.facebook.com/gokulsweetsjaipur",
+      "links": {
+        "website": "https://www.facebook.com/gokulsweetsjaipur"
+      }
+    },
+    {
+      "position": 5,
+      "title": "Rajput AC Service",
+      "place_id": "ChIJ00000000fffcfcd218ed",
+      "data_id": "0x89c20004b:0x00000004",
+      "gps_coordinates": {
+        "latitude": 26.8538,
+        "longitude": 75.8138
+      },
+      "rating": 4.1,
+      "reviews": 67,
+      "type": "Air conditioning contractor",
+      "types": ["Air conditioning contractor"],
+      "address": "Malviya Nagar, Jaipur",
+      "phone": "+91 98290 98765",
+      "hours": "Open",
+      "website": "https://rajputacservice.in",
+      "links": {
+        "website": "https://rajputacservice.in"
+      }
+    },
+    {
+      "position": 6,
+      "title": "Shree Balaji Hardware",
+      "place_id": "ChIJ0000000044dd0483bea7",
+      "data_id": "0x89c20005b:0x00000005",
+      "gps_coordinates": {
+        "latitude": 26.9034,
+        "longitude": 75.8012
+      },
+      "rating": 4.3,
+      "reviews": 154,
+      "type": "Hardware store",
+      "types": ["Hardware store"],
+      "address": "Raja Park, Jaipur",
+      "phone": "+91 94310 12345",
+      "hours": "Open"
+    },
+    {
+      "position": 7,
+      "title": "Kishan Furniture Mart",
+      "place_id": "ChIJ0000000089bd0c356460",
+      "data_id": "0x89c20006b:0x00000006",
+      "gps_coordinates": {
+        "latitude": 26.8967,
+        "longitude": 75.7692
+      },
+      "rating": 4,
+      "reviews": 41,
+      "type": "Furniture store",
+      "types": ["Furniture store"],
+      "address": "Chandpole, Jaipur",
+      "phone": "+91 94130 12345",
+      "hours": "Open",
+      "website": "https://kishanfurniture.in",
+      "links": {
+        "website": "https://kishanfurniture.in"
+      }
+    },
+    {
+      "position": 8,
+      "title": "Sunrise Hospital",
+      "place_id": "ChIJ00000000ce9d13e70a19",
+      "data_id": "0x89c20007b:0x00000007",
+      "gps_coordinates": {
+        "latitude": 26.8545,
+        "longitude": 75.8134
+      },
+      "rating": 4.9,
+      "reviews": 1204,
+      "type": "Hospital",
+      "types": ["Hospital"],
+      "address": "Malviya Nagar, Jaipur",
+      "phone": "+91 141 402 8888",
+      "hours": "Open",
+      "website": "https://sunrisehospital.in",
+      "links": {
+        "website": "https://sunrisehospital.in"
+      }
+    },
+    {
+      "position": 9,
+      "title": "Jai Hind Tailors",
+      "place_id": "ChIJ00000000137d1b98afd3",
+      "data_id": "0x89c20008b:0x00000008",
+      "gps_coordinates": {
+        "latitude": 26.9171,
+        "longitude": 75.7901
+      },
+      "rating": 4.5,
+      "reviews": 198,
+      "type": "Tailor",
+      "types": ["Tailor"],
+      "address": "Tripolia Bazaar, Jaipur",
+      "phone": "+91 98270 12345",
+      "hours": "Open",
+      "website": "https://jaihindtailors.com",
+      "links": {
+        "website": "https://jaihindtailors.com"
+      }
+    },
+    {
+      "position": 10,
+      "title": "Trimurti Electricals",
+      "place_id": "ChIJ00000000585d234a558c",
+      "data_id": "0x89c20009b:0x00000009",
+      "gps_coordinates": {
+        "latitude": 26.8567,
+        "longitude": 75.8098
+      },
+      "rating": 3.9,
+      "reviews": 22,
+      "type": "Electrician",
+      "types": ["Electrician"],
+      "address": "Malviya Nagar, Jaipur",
+      "phone": "+91 90000 45678",
+      "hours": "Open",
+      "website": "https://trimurtielectricals.in",
+      "links": {
+        "website": "https://trimurtielectricals.in"
+      }
+    },
+    {
+      "position": 11,
+      "title": "Ganga Water Treatment",
+      "place_id": "ChIJ000000007254056d1cf5",
+      "data_id": "0x89c2000ab:0x0000000a",
+      "gps_coordinates": {
+        "latitude": 26.9289,
+        "longitude": 75.7561
+      },
+      "rating": 4.2,
+      "reviews": 96,
+      "type": "Water purification service",
+      "types": ["Water purification service"],
+      "address": "Jagatpura, Jaipur",
+      "phone": "+91 93140 98765",
+      "hours": "Open",
+      "website": "https://sulekha.com/ganga-water-treatment-jaipur",
+      "links": {
+        "website": "https://sulekha.com/ganga-water-treatment-jaipur"
+      }
+    },
+    {
+      "position": 12,
+      "title": "Kalyan Jewellers",
+      "place_id": "ChIJ00000000b7340d1ec2ae",
+      "data_id": "0x89c2000bb:0x0000000b",
+      "gps_coordinates": {
+        "latitude": 26.9021,
+        "longitude": 75.8023
+      },
+      "rating": 4.8,
+      "reviews": 342,
+      "type": "Jeweler",
+      "types": ["Jeweler"],
+      "address": "Raja Park, Jaipur",
+      "phone": "+91 98290 45678",
+      "hours": "Open"
+    }
+  ]
+}
