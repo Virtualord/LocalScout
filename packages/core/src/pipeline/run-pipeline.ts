@@ -396,9 +396,39 @@ async function auditAll(
         : await auditWithoutSite(lead, deps, reportDir);
 
       if (audited === undefined || audited.value === undefined) {
-        // Nothing was measured, so nothing is stored. The lead keeps its
-        // discovered status and the user can re-run the audit.
+        /*
+         * A failed audit still gets a row.
+         *
+         * The temptation is to store nothing, because storing an empty audit
+         * could look like a clean bill of health. But an absent row is worse:
+         * "never audited" and "audited, could not reach the site" then look
+         * identical, and the lead screen has to guess which happened. `unavailable`
+         * is already a first-class audit status and the error column already
+         * exists precisely for this. The row carries no metrics and no findings,
+         * so it cannot be mistaken for a measurement.
+         */
         leadLogger.warn({ code: audited?.error?.code }, 'audit.failed');
+
+        await repos.audits.create({
+          leadId: lead.id,
+          status: 'unavailable',
+          startedAt: new Date(),
+          durationMs: audited?.meta.durationMs ?? 0,
+          metrics: {},
+          checks: [],
+          findings: [],
+          /*
+           * The column is NOT NULL so a row can exist at all, and for a failed
+           * audit its value is meaningless. The lead repository reads an
+           * `unavailable` audit as a null score, so this zero is a storage
+           * placeholder and never reaches a screen.
+           */
+          opportunityScore: 0,
+          error: audited?.error?.message ?? 'The audit produced no result and no reason.',
+        });
+
+        // The lead keeps its `discovered` status: it was not successfully
+        // audited, and promoting it would misrepresent the funnel.
         continue;
       }
 

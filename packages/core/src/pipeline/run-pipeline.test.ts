@@ -140,9 +140,17 @@ describe('runPipeline in fixtures mode', () => {
       expect(audit?.opportunityScore).toBeGreaterThan(0);
     }
 
-    // Unreachable leads are left un-audited rather than given invented metrics.
+    // Unreachable leads keep no metrics and no score, but they do get a row
+    // recording that the attempt happened and why it failed. Without it they
+    // would be indistinguishable from a lead nobody has looked at yet.
     for (const lead of unreachable) {
-      expect(await repos.audits.latestForLead(lead.id)).toBeUndefined();
+      const audit = await repos.audits.latestForLead(lead.id);
+      expect(audit, `${lead.name} should record the failed attempt`).toBeDefined();
+      expect(audit?.status).toBe('unavailable');
+      expect(audit?.error).toBeTruthy();
+      // No invented measurements, and no score that would rank it as cold.
+      expect(audit?.metrics).toEqual({});
+      expect(audit?.findings).toEqual([]);
     }
   });
 
@@ -346,6 +354,104 @@ describe('runPipeline in fixtures mode', () => {
       const result = await run({ limit: 5 });
       expect(result.outcomes.length).toBeGreaterThan(0);
       expect(result.status).toBe('completed');
+    });
+
+    /*
+     * A failed audit used to persist nothing, which made "never audited" and
+     * "audited but the site could not be reached" indistinguishable on the lead
+     * screen. Both now produce a row, with the failed one carrying the reason.
+     */
+    it('records an audit row for a lead whose site could not be reached', async () => {
+      const runRow = await repos.runs.create({
+        query: 'plumbers',
+        location: 'Bhopal',
+        limit: 3,
+        language: 'en',
+      });
+
+      const deps = {
+        ...makeDeps(),
+        auditConfig: { skipLighthouse: true, fetchOptions: { timeoutMs: 50 } },
+      };
+      const result = await runPipeline(
+        { runId: runRow.id, query: 'plumbers', location: 'Bhopal', limit: 3, language: 'en' },
+        deps,
+      );
+
+      const leads = await repos.leads.list();
+      const audited = await Promise.all(leads.map((lead) => repos.audits.latestForLead(lead.id)));
+
+      // Every discovered lead has an audit row, whether it succeeded or not.
+      expect(audited.length).toBeGreaterThan(0);
+      for (const entry of audited) {
+        expect(entry).toBeDefined();
+      }
+
+      if (result.auditsFailed > 0) {
+        const failed = audited.filter((entry) => entry?.status === 'unavailable');
+        expect(failed.length).toBeGreaterThan(0);
+        // The reason is stored, so the screen can say what to fix rather than
+        // showing a bare failure.
+        for (const entry of failed) {
+          expect(entry?.error).toBeTruthy();
+        }
+      }
+    });
+
+    it('surfaces a failed audit as a null score, not a measured zero', async () => {
+      const runRow = await repos.runs.create({
+        query: 'plumbers',
+        location: 'Bhopal',
+        limit: 3,
+        language: 'en',
+      });
+
+      const deps = {
+        ...makeDeps(),
+        auditConfig: { skipLighthouse: true, fetchOptions: { timeoutMs: 50 } },
+      };
+      await runPipeline(
+        { runId: runRow.id, query: 'plumbers', location: 'Bhopal', limit: 3, language: 'en' },
+        deps,
+      );
+
+      const leads = await repos.leads.list();
+      for (const lead of leads) {
+        const audit = await repos.audits.latestForLead(lead.id);
+        if (audit?.status === 'unavailable') {
+          // A zero here would rank the lead as the coldest in the list, which
+          // is the opposite of what "could not check" means.
+          expect(lead.opportunityScore).toBeNull();
+          expect(lead.auditStatus).toBe('unavailable');
+        }
+      }
+    });
+
+    it('leaves the lead status at discovered when the audit failed', async () => {
+      const runRow = await repos.runs.create({
+        query: 'plumbers',
+        location: 'Bhopal',
+        limit: 3,
+        language: 'en',
+      });
+
+      const deps = {
+        ...makeDeps(),
+        auditConfig: { skipLighthouse: true, fetchOptions: { timeoutMs: 50 } },
+      };
+      await runPipeline(
+        { runId: runRow.id, query: 'plumbers', location: 'Bhopal', limit: 3, language: 'en' },
+        deps,
+      );
+
+      const leads = await repos.leads.list();
+      for (const lead of leads) {
+        const audit = await repos.audits.latestForLead(lead.id);
+        if (audit?.status === 'unavailable') {
+          // Promoting it to `audited` would overstate how far the run got.
+          expect(lead.status).toBe('discovered');
+        }
+      }
     });
   });
 

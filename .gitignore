@@ -39,3 +39,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+# E2E artefacts. Screenshots and traces are regenerated per run and are not part
+# of the source; the report is a local convenience.
+apps/web/test-results/
+apps/web/playwright-report/

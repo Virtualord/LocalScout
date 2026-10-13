@@ -45,6 +45,15 @@ jobs:
       - name: Unit and integration tests
         run: pnpm test
 
+      # No install step: `findChrome` asks chrome-launcher, which looks at the
+      # system Chrome that ubuntu-latest already provides. Playwright's bundled
+      # Chromium is a different binary in a directory chrome-launcher does not
+      # search, so installing it here would satisfy nothing. If the slow suite
+      # reports Chrome as missing, the tests skip with that reason rather than
+      # failing, so this cannot silently go green either.
+      - name: Slow suite against a real browser
+        run: pnpm test:slow
+
       - name: Build
         run: pnpm build
 

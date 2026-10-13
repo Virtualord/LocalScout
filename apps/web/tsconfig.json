@@ -13,5 +13,15 @@
       "@localscout/core": ["../../packages/core/src/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "playwright.config.ts"]
+  // The e2e suite is included so `pnpm typecheck` covers it. Playwright types
+  // are listed explicitly because this project does not use the global `types`
+  // convention; the specs import from `@playwright/test` rather than relying on
+  // ambient globals, so only the driver types are needed.
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "e2e/**/*.ts",
+    "vite.config.ts",
+    "playwright.config.ts"
+  ]
 }

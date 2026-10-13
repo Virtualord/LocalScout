@@ -140,10 +140,15 @@ Read these before trusting a number.
 ```bash
 pnpm dev            # API and web app
 pnpm test           # unit, integration, component, API
-pnpm test:slow      # needs Chrome or a real model; not in CI
+pnpm test:slow      # real Lighthouse against local fixtures; needs Chrome
+pnpm e2e            # Playwright at 1440px and 390px, with axe on every route
 pnpm lint && pnpm typecheck && pnpm test && pnpm build   # the gate
 pnpm eval           # draft quality across EVAL_MODELS
 ```
+
+Both `pnpm test:slow` and `pnpm e2e` boot against a throwaway database and need
+no key. `test:slow` skips with a stated reason when Chrome is absent rather than
+failing, because a missing browser is a supported setup, not a defect.
 
 ## Stack
 

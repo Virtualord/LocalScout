@@ -44,7 +44,7 @@ export function LeadCard({ lead, onOpen }: LeadCardProps) {
     <>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <TierChip score={lead.opportunityScore} />
+          <TierChip score={lead.opportunityScore} auditStatus={lead.auditStatus} />
           <StatusChip status={lead.status} />
           {lead.canWhatsApp && <Chip variant="neutral">WhatsApp</Chip>}
         </div>
