@@ -24,3 +24,5 @@ export {
   type AppRuntime,
   type BootOptions,
 } from './runtime.js';
+
+export { CLI_USAGE, CliUsageError, parseCliArgs, type CliArgs } from './cli-args.js';

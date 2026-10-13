@@ -13,3 +13,9 @@ export {
   type PipelineInput,
   type PipelineResult,
 } from './run-pipeline.js';
+export {
+  isValidCron,
+  startScheduler,
+  type SchedulerHandle,
+  type SchedulerOptions,
+} from './scheduler.js';
