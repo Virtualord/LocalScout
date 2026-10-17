@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Page, type TestInfo } from '@playwright/test';
+import { E2E_SCREENSHOT_DIR } from '../playwright.config.js';
 
 /**
  * Accessibility checks and screenshots.
@@ -120,16 +121,14 @@ export async function attachScreenshot(page: Page, testInfo: TestInfo): Promise<
     .slice(0, 60);
 
   /*
-   * `join(outputDir, '..')` rather than passing '..' to outputPath. Playwright
-   * refuses a path that escapes the test's own output directory, which it
-   * cannot distinguish from a genuine traversal, so the common parent is
-   * resolved here and the screenshots land one level up in `screenshots/`.
+   * The path is imported from the config rather than derived from Playwright's
+   * own root, which resolves relative to the test directory and so points
+   * somewhere CI never uploads. Sharing one constant keeps the two in step.
    */
-  const screenshotsDir = join(testInfo.config.rootDir, 'test-results', 'screenshots');
-  mkdirSync(screenshotsDir, { recursive: true });
+  mkdirSync(E2E_SCREENSHOT_DIR, { recursive: true });
 
   await page.screenshot({
-    path: join(screenshotsDir, `${slug}.png`),
+    path: join(E2E_SCREENSHOT_DIR, `${slug}.png`),
     fullPage: true,
   });
 }

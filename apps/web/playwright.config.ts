@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * End-to-end configuration.
@@ -23,6 +24,20 @@ const WEB_PORT = Number(process.env['E2E_WEB_PORT'] ?? 5174);
 
 /** Absolute, unique per run, and removed by the global setup. */
 export const E2E_DATA_DIR = join(tmpdir(), 'localscout-e2e-data');
+
+/**
+ * Where visual-state screenshots are written.
+ *
+ * Derived from this file's own location rather than from `config.rootDir`,
+ * because Playwright resolves `rootDir` relative to the test directory and the
+ * two disagree. CI uploads `apps/web/test-results/screenshots`, and a path that
+ * drifts from that upload silently drops every screenshot on the floor.
+ */
+export const E2E_SCREENSHOT_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  'test-results',
+  'screenshots',
+);
 
 export default defineConfig({
   testDir: './e2e',
