@@ -20,6 +20,8 @@ const HOME_COPY = {
   eyebrow: 'Local · open-weight · human-approved',
   headlineA: 'Local sites, audited.',
   headlineB: 'Pitches with proof.',
+  subline:
+    'Find businesses in one city, measure what is actually wrong with their sites, and get one honest draft per lead. You send every message.',
   placeholder: 'Plumbers in Bhopal',
 };
 
@@ -137,15 +139,27 @@ export function Home() {
 
   return (
     <div className="bg-bg">
-      <section className="container flex min-h-[calc(100vh-var(--header-height))] flex-col pb-10 pt-12">
+      {/*
+        Centred, two lines, one phrase each.
+
+        Centred because that is what the hero is: a statement addressed to one
+        reader, not a column of text to be scanned. Two lines because a single
+        line at this size would need a 1440px measure for a 44-character
+        sentence, and anything that wraps mid-phrase reads as an accident.
+      */}
+      <section className="container pb-8 pt-14 text-center">
         <p className="eyebrow text-paper/70">{HOME_COPY.eyebrow}</p>
 
-        <h1 className="display display-hero mt-5 max-w-[16ch]">
+        <h1 className="display display-hero mx-auto mt-5 max-w-[20ch]">
           <span className="block text-paper">{HOME_COPY.headlineA}</span>
           <span className="block text-coral">{HOME_COPY.headlineB}</span>
         </h1>
 
-        <div className="mt-9">
+        <p className="prose-measure mx-auto mt-5 text-[16px] leading-relaxed text-paper/75">
+          {HOME_COPY.subline}
+        </p>
+
+        <div className="mx-auto mt-8 max-w-[620px]">
           <SearchField
             value={search}
             onChange={setSearch}
@@ -158,26 +172,39 @@ export function Home() {
 
         {/* Announced politely, so a screen reader hears progress without being
             interrupted mid-sentence by every audit line. */}
-        <p aria-live="polite" className="mono mt-4 min-h-[1.25rem] text-[12px] text-paper/70">
+        <p
+          aria-live="polite"
+          className="mono mx-auto mt-4 min-h-[1.25rem] max-w-[60ch] text-[12px] text-paper/70"
+        >
           {status ??
             (leads.length > 0
               ? `${leads.length} leads on the map from your last search`
               : 'No leads yet. Search for a business type and a city.')}
         </p>
+      </section>
 
-        <div className="mt-8">
-          <PixelMap
-            leads={mapLeads}
-            onSelect={setLeadId}
-            recentlyDiscoveredIds={recentlyDiscovered}
-            recentlyAuditedIds={recentlyAudited}
-          />
-        </div>
+      {/*
+        The map runs edge to edge rather than sitting in the container.
 
-        <div className="mt-5 flex flex-wrap items-center gap-4">
+        It is the hero's second half, and a map boxed into a column reads as an
+        illustration. Full bleed gives it the width to look like a place rather
+        than a widget, and the spotlight only makes sense at that size.
+      */}
+      <section aria-label="Lead map" className="border-y border-ink bg-bg-deep">
+        <PixelMap
+          leads={mapLeads}
+          onSelect={setLeadId}
+          recentlyDiscoveredIds={recentlyDiscovered}
+          recentlyAuditedIds={recentlyAudited}
+        />
+      </section>
+
+      <section className="container py-10 text-center">
+        <p className="mono text-[13px] text-paper/80">
+          Prefer a list?{' '}
           <Link
             to="/leads"
-            className="mono text-[12px] uppercase tracking-wider text-paper underline decoration-coral decoration-2 underline-offset-4"
+            className="text-paper underline decoration-coral decoration-2 underline-offset-4"
           >
             See every lead
           </Link>
@@ -185,21 +212,29 @@ export function Home() {
             No demo-data link: fixtures mode is already the default when no
             SerpApi key is set, so there is nothing extra to switch on. A link
             to a query parameter nothing reads would be a dead control.
-          */}
+          */}{' '}
+          or{' '}
           <Link
             to="/styleguide"
-            className="mono text-[12px] uppercase tracking-wider text-paper/70 underline decoration-coral/50 decoration-2 underline-offset-4"
+            className="text-paper underline decoration-coral decoration-2 underline-offset-4"
           >
-            See the design system
+            read the design system
           </Link>
-        </div>
+          .
+        </p>
+      </section>
 
-        {/* Footer strip, pinned to the bottom of the first viewport. */}
-        <div className="mt-auto flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-ink pt-6">
-          <p className="display text-[15px] text-red">Audit first. Pitch second.</p>
-          <StripGroup label="Runs on" value="Gemma and Ollama" />
-          <StripGroup label="Finds with" value="SerpApi" />
-          <StripGroup label="Audits with" value="Lighthouse" />
+      {/* The closing paper band: the promise, and what keeps it. */}
+      <section className="border-t border-ink bg-paper-band">
+        <div className="container flex flex-wrap items-center justify-between gap-x-10 gap-y-6 py-8">
+          <p className="display text-xl text-ink">
+            Audit first. <span className="text-red">Pitch second.</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-x-9 gap-y-3">
+            <StripGroup label="Runs on" value="Gemma and Ollama" />
+            <StripGroup label="Finds with" value="SerpApi" />
+            <StripGroup label="Audits with" value="Lighthouse" />
+          </div>
         </div>
       </section>
 
