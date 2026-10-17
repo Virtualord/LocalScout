@@ -18,12 +18,16 @@
  *
  * Matching is on the registrable-ish label plus known public suffixes, so
  * `www.facebook.com`, `m.facebook.com`, and `facebook.com` all collapse.
+ *
+ * Subdomains are matched by {@link matchesHost}, so an entry never needs to
+ * list its own subdomains. Writing `m.facebook.com` next to `facebook.com` is
+ * not a second rule, it is the same rule typed twice, and a list where the same
+ * host appears at two lengths is a list nobody can safely edit later.
  */
 const SOCIAL_HOSTS: readonly string[] = [
   'facebook.com',
   'fb.com',
   'fb.me',
-  'm.facebook.com',
   'instagram.com',
   'linkedin.com',
   'twitter.com',
@@ -34,7 +38,6 @@ const SOCIAL_HOSTS: readonly string[] = [
   'tiktok.com',
   'wa.me',
   'whatsapp.com',
-  'api.whatsapp.com',
   't.me',
   'telegram.me',
   'threads.net',
@@ -48,7 +51,6 @@ const DIRECTORY_HOSTS: readonly string[] = [
   'sulekha.com',
   'sulekha.in',
   'indiamart.com',
-  'indiaMART.com'.toLowerCase(),
   'tradeindia.com',
   'exportersindia.com',
   'magicpin.com',
@@ -57,9 +59,13 @@ const DIRECTORY_HOSTS: readonly string[] = [
   'yellowpages.com',
   'yellow-pages.in',
   'business.site',
+  /*
+   * Covers `google.com/url?q=…` redirect links as well as a plain Google page,
+   * because the match is on the host. An entry spelling out the path, which is
+   * what `google.com/urls` was, can never match: a hostname has no slash in it.
+   */
   'google.com',
   'goo.gl',
-  'maps.app.goo.gl',
   'g.page',
   'linktr.ee',
   'linktr.ee.link',
@@ -72,8 +78,6 @@ const DIRECTORY_HOSTS: readonly string[] = [
   'dribbble.com',
   'bebbly.io',
   'justme.io',
-  'business.site',
-  'google.com/urls',
 ];
 
 /** Query and tracking noise stripped before comparing hosts. */

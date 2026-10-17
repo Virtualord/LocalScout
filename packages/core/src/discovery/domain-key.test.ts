@@ -102,6 +102,33 @@ describe('isSocialOrDirectory', () => {
     expect(isSocialOrDirectory('m.facebook.com')).toBe(true);
   });
 
+  /*
+   * These three were written out as their own entries and were removed as
+   * redundant: `matchesHost` already matches any subdomain of a listed host, so
+   * listing a subdomain next to its parent is the same rule typed twice. The
+   * assertions stay because they are what makes the removal safe to repeat.
+   */
+  it('covers a subdomain whose own entry was redundant', () => {
+    expect(isSocialOrDirectory('m.facebook.com')).toBe(true);
+    expect(isSocialOrDirectory('api.whatsapp.com')).toBe(true);
+    expect(isSocialOrDirectory('maps.app.goo.gl')).toBe(true);
+  });
+
+  it('covers a Google redirect link through the host alone', () => {
+    // `google.com/url?q=…` is the shape that appears in listings, and the host
+    // is what matches. The old `google.com/urls` entry spelled out a path,
+    // which is unreachable: a hostname never contains a slash.
+    expect(isSocialOrDirectory('google.com')).toBe(true);
+    expect(computeDomainKey('https://www.google.com/url?q=https://x.example')).toBeUndefined();
+  });
+
+  it('treats business.site and indiamart.com as directories once each', () => {
+    expect(isSocialOrDirectory('business.site')).toBe(true);
+    expect(isSocialOrDirectory('sharma.business.site')).toBe(true);
+    expect(isSocialOrDirectory('indiamart.com')).toBe(true);
+    expect(isSocialOrDirectory('www.indiamart.com')).toBe(true);
+  });
+
   it('leaves a real site alone', () => {
     expect(isSocialOrDirectory('sharmaplumbing.in')).toBe(false);
   });
