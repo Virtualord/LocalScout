@@ -25,8 +25,14 @@ test-results/
 blob-report/
 .playwright/
 
-# Design reference material (may contain personal account details)
-ref/
+# Reference material. Never committed: the recording is of someone's own
+# browser session and contains personal account details.
+#
+# Case-insensitive, optional plural, anchored at the root, so ref/, Ref/, refs/
+# and Refs/ are all excluded. Two traps here, both hit in practice: git is
+# case-sensitive by default, and `[Rr]efs?/` does NOT work, because `?` matches
+# the trailing slash and leaves the pattern's own `/` with nothing to match.
+/[Rr]ef*/
 
 # Editor and OS
 .DS_Store
