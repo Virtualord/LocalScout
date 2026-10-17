@@ -29,6 +29,20 @@ export default defineConfig({
   // Screenshots on failure and always, so a red run has evidence attached.
   outputDir: 'test-results/artifacts',
   fullyParallel: false,
+  /*
+   * One worker, deliberately.
+   *
+   * `fullyParallel: false` stops tests inside one file from overlapping, but
+   * Playwright still runs files concurrently, and every test here talks to the
+   * same API and the same SQLite database. Two workers both submitting
+   * "plumber in Bhopal" means one of them is refused by the duplicate-run guard
+   * with a 409, and the suite then fails on a race it created itself.
+   *
+   * This also matches what the app is: one person, one database, one run at a
+   * time. Serialising costs about a minute and removes a whole class of
+   * intermittent failure that would otherwise cost hours of debugging.
+   */
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   // Axe runs on every route at two viewports, which is not instant.
