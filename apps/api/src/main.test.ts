@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ConfigError, loadConfig } from '@localscout/core';
 import { describeStartupError } from './main.js';
 
 /**
@@ -51,6 +52,40 @@ describe('describeStartupError', () => {
       );
       expect(message).toMatch(/privileg|elevated/i);
       expect(message).toMatch(/API_PORT/);
+    });
+  });
+
+  describe('a configuration error', () => {
+    /*
+     * `boot` used to print this and call `process.exit` itself, which made the
+     * message impossible to assert and took the decision away from every caller
+     * — the API, the CLI and the tests. It throws now, and this is the rendering
+     * the API gives it.
+     *
+     * The error is built by the real loader rather than by hand, so the test
+     * fails if `loadConfig` ever stops producing a printable message.
+     */
+    const fromBadEnv = (): ConfigError => {
+      try {
+        loadConfig({ LLM_PROVIDER: 'telepathy' } as NodeJS.ProcessEnv);
+      } catch (error) {
+        if (error instanceof ConfigError) return error;
+        throw error;
+      }
+      throw new Error('a provider of "telepathy" should not be accepted');
+    };
+
+    it('prints the message as a sentence rather than a stack trace', () => {
+      const message = describeStartupError(fromBadEnv(), 8787);
+      expect(message).toContain('LLM_PROVIDER');
+      expect(message).toContain('.env.example');
+      expect(message).not.toMatch(/at .*\(.*:\d+:\d+\)/);
+    });
+
+    it('says nothing about ports, which are not the problem', () => {
+      const message = describeStartupError(fromBadEnv(), 8787);
+      expect(message).not.toMatch(/already in use/i);
+      expect(message).not.toMatch(/lsof/);
     });
   });
 

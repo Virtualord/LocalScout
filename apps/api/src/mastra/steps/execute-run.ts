@@ -27,7 +27,7 @@ export type RunInput = z.infer<typeof runInputSchema>;
 
 export const runResultSchema = z.object({
   runId: z.string(),
-  status: z.enum(['completed', 'failed']),
+  status: z.enum(['completed', 'failed', 'cancelled']),
   leadsFound: z.number(),
   leadsNew: z.number(),
   skippedDuplicates: z.number(),
@@ -73,29 +73,45 @@ export const executeRunStep = createStep({
   inputSchema: runInputSchema,
   outputSchema: runResultSchema,
   execute: async ({ inputData }) => {
-    const deps = getDeps();
-    return runPipeline(inputData, deps);
+    return runPipeline(inputData, getDeps(inputData.runId));
   },
 });
 
 /**
- * Dependencies for the workflow.
+ * Dependencies per run, keyed by run id.
  *
- * Set once at boot by the API and the CLI. A module-level holder rather than a
- * parameter is what lets a Mastra step stay a zero-argument function, which is
- * the shape the framework requires.
+ * A Mastra step is a zero-argument function, so the dependencies it needs cannot
+ * be passed in; they are looked up by the run id the step was given, which is the
+ * only identifier the framework hands it and the one thing that is guaranteed to
+ * be unique per run.
+ *
+ * Keyed rather than a single holder because a holder holds one thing. Whoever
+ * started a run last overwrote it, so a scheduled run starting on top of a
+ * manual one sent the manual run's progress events to the scheduled run's
+ * emitter: the run in the browser stopped updating and another run's events
+ * appeared under its id. There is no correct ordering of a single slot; the run
+ * id is what makes the lookup right.
+ *
+ * Bounded by explicit release, not by hope: `claimRun` clears the entry when the
+ * run ends, whichever way it ends.
  */
-let deps: PipelineDeps | undefined;
+const depsByRun = new Map<string, PipelineDeps>();
 
-export function setWorkflowDeps(next: PipelineDeps): void {
-  deps = next;
+export function setWorkflowDeps(runId: string, next: PipelineDeps): void {
+  depsByRun.set(runId, next);
 }
 
-export function getDeps(): PipelineDeps {
-  if (!deps) {
+export function getDeps(runId: string): PipelineDeps {
+  const found = depsByRun.get(runId);
+  if (!found) {
     throw new Error(
-      'Workflow dependencies were not set. Call setWorkflowDeps() during boot, before starting a run.',
+      `No dependencies registered for run ${runId}. Call setWorkflowDeps(runId, deps) before starting it.`,
     );
   }
-  return deps;
+  return found;
+}
+
+/** Release a run's dependencies. Called when the run ends, so the map stays bounded. */
+export function clearWorkflowDeps(runId: string): void {
+  depsByRun.delete(runId);
 }

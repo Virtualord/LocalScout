@@ -16,10 +16,7 @@ import { createApp } from './app.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerLeadRoutes } from './routes/leads.js';
 import { registerRunRoutes } from './routes/runs.js';
-import { setWorkflowDeps } from './mastra/workflows/find-and-audit-leads.js';
-import { pipelineDeps } from './runtime.js';
 import type { AppRuntime } from './runtime.js';
-import { createEventEmitter } from '@localscout/core';
 
 /**
  * API integration tests.
@@ -65,8 +62,6 @@ describe('api', () => {
     registerHealthRoutes(app, runtime);
     registerRunRoutes(app, runtime);
     registerLeadRoutes(app, runtime);
-
-    setWorkflowDeps(pipelineDeps(runtime, createEventEmitter('test')));
   });
 
   afterEach(() => {
@@ -235,6 +230,95 @@ describe('api', () => {
       expect(body.runId).toBe(runId);
       expect(body.error).toContain('already running');
     });
+  });
+
+  /*
+   * Cancelling exists because the 409 above offers it: "wait for it to finish,
+   * or stop it from the Runs screen". Before this endpoint that sentence
+   * promised a screen that did not exist, and a run whose process died held the
+   * slot for the life of the database.
+   */
+  describe('POST /api/runs/:id/cancel', () => {
+    const seedRunning = async () => {
+      const run = await runtime.repos.runs.create({
+        query: 'plumbers',
+        location: 'Bhopal',
+        limit: 2,
+        language: 'en',
+      });
+      await runtime.repos.runs.setStatus(run.id, 'running');
+      return run;
+    };
+
+    it('stops a running search and frees the slot', async () => {
+      const run = await seedRunning();
+
+      const response = await post(`/api/runs/${run.id}/cancel`);
+      expect(response.status).toBe(200);
+
+      const body = (await response.json()) as { run: { status: string; finishedAt: string } };
+      expect(body.run.status).toBe('cancelled');
+      expect(body.run.finishedAt).not.toBeNull();
+      expect(await runtime.repos.runs.activeRun()).toBeUndefined();
+    });
+
+    it('reports an unknown run', async () => {
+      const response = await post('/api/runs/nope/cancel');
+      expect(response.status).toBe(404);
+      expect(((await response.json()) as { error: string }).error).toContain('nope');
+    });
+
+    it('refuses a run that already ended', async () => {
+      const run = await seedRunning();
+      await runtime.repos.runs.setStatus(run.id, 'completed');
+
+      const response = await post(`/api/runs/${run.id}/cancel`);
+      expect(response.status).toBe(409);
+      expect(((await response.json()) as { error: string }).error).toContain('already ended');
+    });
+
+    it('answers a repeated cancel with the cancelled run, not an error', async () => {
+      const run = await seedRunning();
+
+      expect((await post(`/api/runs/${run.id}/cancel`)).status).toBe(200);
+      const second = await post(`/api/runs/${run.id}/cancel`);
+
+      // A double click is not a mistake worth a red box.
+      expect(second.status).toBe(200);
+      expect(((await second.json()) as { run: { status: string } }).run.status).toBe('cancelled');
+    });
+
+    /*
+     * A progress stream that crashes the API is worse than one that stops. The
+     * poll reads the database every second, and a read that rejects inside a
+     * `setInterval` callback becomes an unhandled rejection, which Node ends
+     * the process over.
+     */
+    it('closes the event stream rather than crashing when a poll read fails', async () => {
+      const run = await seedRunning();
+
+      const original = runtime.repos.runs.byId.bind(runtime.repos.runs);
+      let reads = 0;
+      runtime.repos.runs.byId = (id: string) => {
+        reads += 1;
+        // The first read is the run itself; the poll is every one after that.
+        if (reads > 1) return Promise.reject(new Error('the database went away'));
+        return original(id);
+      };
+
+      const response = await app.fetch(new Request(`http://127.0.0.1/api/runs/${run.id}/events`));
+      expect(response.status).toBe(200);
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('expected the SSE response to carry a stream');
+
+      // Resolving at all is the assertion: the stream ends, and no unhandled
+      // rejection reaches the test runner.
+      for (;;) {
+        const { done } = await reader.read();
+        if (done) break;
+      }
+    }, 10_000);
   });
 
   describe('runs listing', () => {

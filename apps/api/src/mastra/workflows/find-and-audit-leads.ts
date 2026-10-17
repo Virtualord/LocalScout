@@ -19,6 +19,7 @@ export const findAndAuditLeads = createWorkflow({
 export type FindAndAuditLeadsWorkflow = typeof findAndAuditLeads;
 
 export {
+  clearWorkflowDeps,
   executeRunStep,
   getDeps,
   setWorkflowDeps,

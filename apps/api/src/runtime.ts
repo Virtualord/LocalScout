@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Logger } from 'pino';
 import {
-  ConfigError,
   FixtureProvider,
   loadConfig,
   OllamaProvider,
@@ -108,18 +107,16 @@ export interface BootOptions {
 }
 
 export function boot(env: NodeJS.ProcessEnv = process.env, options: BootOptions = {}): AppRuntime {
-  let config: AppConfig;
-  try {
-    config = loadConfig(env);
-  } catch (error) {
-    if (error instanceof ConfigError) {
-      // A configuration error is the most common first-run failure, so it is
-      // printed plainly rather than as a stack trace.
-      process.stderr.write(`\n${error.message}\n\n`);
-      process.exit(1);
-    }
-    throw error;
-  }
+  /*
+   * A configuration error is thrown, not printed and exited on.
+   *
+   * `boot` is called by the API, the CLI and the tests, and a function that ends
+   * the process makes that decision on behalf of all three: the test runner
+   * cannot assert the message, and the CLI cannot decide how to render it. Each
+   * entry point prints it its own way without a stack trace —
+   * `describeStartupError` for the API, `cli.ts` for the command line.
+   */
+  const config = loadConfig(env);
 
   const databaseUrl = options.databaseUrl ?? join(config.app.dataDir, 'localscout.db');
 
@@ -151,8 +148,13 @@ export function boot(env: NodeJS.ProcessEnv = process.env, options: BootOptions 
   };
 }
 
-/** Assemble the dependency bundle the pipeline expects. */
-export function pipelineDeps(runtime: AppRuntime, emit: Emit): PipelineDeps {
+/**
+ * Assemble the dependency bundle the pipeline expects.
+ *
+ * `signal` is the run's cancellation switch, so a cancel reaches the work that
+ * is actually running rather than only the row that describes it.
+ */
+export function pipelineDeps(runtime: AppRuntime, emit: Emit, signal?: AbortSignal): PipelineDeps {
   return {
     config: runtime.config,
     repos: runtime.repos,
@@ -160,5 +162,6 @@ export function pipelineDeps(runtime: AppRuntime, emit: Emit): PipelineDeps {
     emit,
     provider: runtime.provider,
     sender: runtime.sender,
+    ...(signal !== undefined ? { signal } : {}),
   };
 }

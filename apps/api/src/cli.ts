@@ -38,7 +38,8 @@ async function main(): Promise<void> {
   const active = await runtime.repos.runs.activeRun();
   if (active) {
     process.stderr.write(
-      `A run is already in progress (started ${active.startedAt?.toISOString() ?? 'unknown'}). Wait for it to finish, or cancel it first.\n`,
+      `A run is already in progress (started ${active.startedAt?.toISOString() ?? 'unknown'}).\n` +
+        `Wait for it to finish, or stop it: POST /api/runs/${active.id}/cancel\n`,
     );
     runtime.close();
     process.exit(1);
@@ -50,6 +51,7 @@ async function main(): Promise<void> {
     if (
       event.type === 'run.started' ||
       event.type === 'run.finished' ||
+      event.type === 'run.cancelled' ||
       event.type === 'run.failed'
     ) {
       process.stdout.write(`${event.message ?? event.type}\n`);
@@ -60,7 +62,23 @@ async function main(): Promise<void> {
     }
   });
 
-  setWorkflowDeps(pipelineDeps(runtime, emit));
+  /*
+   * Ctrl-C stops the run instead of abandoning it.
+   *
+   * Leaving a row marked `running` would refuse the next search until something
+   * reaped it, and only one run may be active at a time. The first signal asks
+   * the pipeline to stop at the next lead boundary, which records the run as
+   * cancelled; the handlers are `once`, so a second Ctrl-C terminates the process
+   * the usual way for a user who does not want to wait for an audit in flight.
+   */
+  const controller = new AbortController();
+  process.once('SIGINT', () => {
+    process.stdout.write('\nStopping after the check in flight...\n');
+    controller.abort();
+  });
+  process.once('SIGTERM', () => controller.abort());
+
+  setWorkflowDeps(runRow.id, pipelineDeps(runtime, emit, controller.signal));
 
   const run = await findAndAuditLeads.createRun();
   const result = await run.start({ inputData: { runId: runRow.id, ...args } });
@@ -84,11 +102,15 @@ async function main(): Promise<void> {
   );
   if (summary.status === 'failed') {
     process.stderr.write(`Run reported: ${summary.error ?? 'unknown error'}\n`);
+  } else if (summary.status === 'cancelled') {
+    process.stdout.write('Stopped early. The leads it already found are kept.\n');
   }
   process.stdout.write(`Open http://localhost:5173/leads to review them.\n`);
 
   runtime.close();
-  process.exit(summary.status === 'failed' ? 1 : 0);
+  // 130 is the conventional exit code for a command stopped by a signal, which
+  // is the only way a CLI run ends up cancelled.
+  process.exit(summary.status === 'failed' ? 1 : summary.status === 'cancelled' ? 130 : 0);
 }
 
 await main();
