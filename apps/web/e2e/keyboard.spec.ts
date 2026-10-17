@@ -147,8 +147,16 @@ test('the search field draws its focus ring on the field, not the input', async 
 });
 
 test('the tabs move with the arrow keys', async ({ page }) => {
-  await openApp(page, '/styleguide');
+  // The lead modal, which is where the tabs a user actually meets live: Evidence,
+  // Draft, Contact log. This used to run against the styleguide, which no longer
+  // exists, and losing the assertion with it would have left the arrow-key
+  // handling on a real screen untested.
+  await openApp(page, '/leads');
 
+  const openCard = page.locator('li button').first();
+  test.skip((await openCard.count()) === 0, 'no leads to open');
+
+  await openCard.click();
   const tabs = page.getByRole('tab');
   await expect(tabs.first()).toBeVisible();
   await tabs.first().focus();

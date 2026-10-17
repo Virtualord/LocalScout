@@ -2,7 +2,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 import { AppProviders, AppShell } from './app/shell.js';
-import { Styleguide } from './features/styleguide/index.js';
 import { Home } from './features/home/index.js';
 import { LeadsScreen } from './features/leads/index.js';
 import { DashboardScreen } from './features/dashboard/index.js';
@@ -29,7 +28,6 @@ const router = createBrowserRouter([
       { path: 'dashboard', Component: DashboardScreen },
       { path: 'runs', Component: RunsScreen },
       { path: 'settings', Component: SettingsScreen },
-      { path: 'styleguide', Component: Styleguide },
       { path: '*', Component: NotFound },
     ],
   },

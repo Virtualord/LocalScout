@@ -107,8 +107,8 @@ export async function checkA11y(
  * Capture a full-page screenshot into `test-results/screenshots`.
  *
  * Full page rather than viewport, because half of what needs reviewing here is
- * below the fold: the dashboard's metric cards and the styleguide's long
- * scroll.
+ * below the fold: the dashboard's metric cards and the settings screen's long
+ * configuration list.
  */
 export async function attachScreenshot(page: Page, testInfo: TestInfo): Promise<void> {
   // The slug comes from the project and the test title, which between them are

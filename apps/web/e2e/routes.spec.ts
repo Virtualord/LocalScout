@@ -73,11 +73,6 @@ const ROUTES: Route[] = [
     heading: 'What this machine',
     selector: 'text=Configuration',
   },
-  {
-    path: '/styleguide',
-    heading: 'Everything on one page.',
-    selector: 'text=Display hero',
-  },
 ];
 
 for (const route of ROUTES) {

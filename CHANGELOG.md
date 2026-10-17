@@ -24,6 +24,15 @@ now works.
   every later search until the row was edited by hand. The API now marks those
   runs failed at boot and at shutdown, with the reason written into the row.
 
+### Removed
+
+- **The styleguide.** `/styleguide`, its route entry, the footer link and the
+  home-page link are gone. It was a second copy of every screen's worth of
+  components to keep in step, and it was the only page whose contrast
+  regressions nobody looked at. The components themselves are unchanged and are
+  still covered — the tab keyboard test moved to the lead modal, which is where
+  a user actually meets a tab.
+
 ### Changed
 
 - The map grid is wider (96×28 on desktop, 40×24 on mobile), cell size is derived
@@ -94,6 +103,24 @@ now works.
   key, with nothing in the logs to say why. It is read at boot now, from the
   repository root whichever directory the command ran from, without overriding a
   variable already in the environment.
+- **The lead modal flew in from off the left of the screen.** The panel is centred
+  with `-translate-x-1/2`, which Tailwind v4 emits as the `translate` property,
+  but the keyframe animated `transform`. The two do not replace each other, they
+  add: frame zero carried a −50% offset from `translate` and another from
+  `transform`, putting the panel at x = −280 instead of 220. The keyframe
+  animates `translate` now.
+- **Two of the four buttons in the lead modal were invisible.** "Skip this one"
+  and "Close" use the ghost variant, whose label was `var(--color-paper)` — a
+  paper-coloured button written for a dark band, and the only two buttons using
+  it were on the cream panel. White on cream: in the DOM, in the tab order, and
+  unreadable. Ghost is ink with a quiet outline, which is what the surface it is
+  actually on needs.
+- The modal footer sat flush against the panel's bottom border, with the hard
+  shadows on its buttons clipped along that edge, and on a phone it was below the
+  fold — the actions for dismissing a lead could only be reached by scrolling
+  past the lead. The panel is a column with a scrolling body and fixed header and
+  footer now, and the footer is two even columns on a phone instead of wrapping
+  2‑1‑1.
 - The `ssrf.ts` header claimed the resolved address was pinned for the request.
   It is checked, not pinned; the comments now say so and ADR-0002 records the
   residual.
@@ -115,13 +142,15 @@ now works.
 
 ### Quality
 
-- 892 fast tests and 5 slow ones. New coverage where it was thinnest: the search
-  flow on the home screen, the leads screen in both views, the runs screen's stop
-  control, the lead modal's language switcher, the map (repaints, the pinned
-  projection box, and the spotlight's entry, easing and fade-out), the design
-  primitives' focus ring — asserted in the browser as a computed style, since
-  jsdom has no cascade to test — and `.env` loading, including that a shell
-  variable still wins over the file.
+- 892 fast tests and 5 slow ones, and 50 end-to-end. New coverage where it was
+  thinnest: the search flow on the home screen, the leads screen in both views,
+  the runs screen's stop control, the lead modal's language switcher, the map
+  (repaints, the pinned projection box, and the spotlight's entry, easing and
+  fade-out), the design primitives' focus ring, the modal's entry animation and
+  footer legibility — all asserted as computed styles and bounding boxes, because
+  each of those bugs lived in the cascade or in a resolved colour, where jsdom has
+  nothing to say — and `.env` loading, including that a shell variable still wins
+  over the file.
 
 ## [0.1.0] - 2026-10-13
 

@@ -212,14 +212,7 @@ export function Home() {
             No demo-data link: fixtures mode is already the default when no
             SerpApi key is set, so there is nothing extra to switch on. A link
             to a query parameter nothing reads would be a dead control.
-          */}{' '}
-          or{' '}
-          <Link
-            to="/styleguide"
-            className="text-paper underline decoration-coral decoration-2 underline-offset-4"
-          >
-            read the design system
-          </Link>
+          */}
           .
         </p>
       </section>

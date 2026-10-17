@@ -187,14 +187,28 @@
   box-shadow: 0 0 0 var(--color-ink);
 }
 
-/* Ghost: no face, no shadow. Used inside dark bands. */
+/*
+ * Ghost: no shadow, a quiet outline, ink label. The tier for an action a person
+ * may well not want to take.
+ *
+ * This was paper-coloured, for a dark band, and the only two buttons using it
+ * were in the lead modal's footer — on paper. White text on a cream footer is
+ * invisible: the button was in the DOM, in the tab order, and could not be read.
+ * An invisible control is worse than no control, because a keyboard user can reach
+ * it and cannot see what they have reached. Since nothing renders a ghost button
+ * on a dark band, it is styled for the surface it is actually on.
+ *
+ * The border is there because "no face and no shadow" left it looking like a
+ * paragraph of uppercase text. Quiet is the goal; invisible is not.
+ */
 .btn-ghost {
   background-color: transparent;
-  color: var(--color-paper);
+  color: var(--color-ink);
+  border-color: var(--color-ink);
 }
 
 .btn-ghost:hover {
-  background-color: rgb(247 247 242 / 0.12);
+  background-color: rgb(16 32 29 / 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -307,14 +321,28 @@
   }
 }
 
+/*
+ * Animates `translate`, never `transform`.
+ *
+ * The panel is centred with `left-1/2 top-1/2` plus Tailwind's
+ * `-translate-x-1/2 -translate-y-1/2`, and Tailwind v4 emits those as the
+ * individual `translate` property rather than as a transform. So a keyframe
+ * animating `transform: translate(-50%, …)` did not replace the centring, it
+ * added to it: the panel carried a -50% offset from `translate` *and* another
+ * from `transform`, putting frame zero at x = -280 instead of 220. The modal
+ * flew in from off the left of the screen.
+ *
+ * Animating the same property that positions it keeps the two in step, and the
+ * rise is the only thing that changes.
+ */
 @keyframes dialog-panel-in {
   from {
     opacity: 0;
-    transform: translate(-50%, calc(-50% + 8px));
+    translate: -50% calc(-50% + 8px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%);
+    translate: -50% -50%;
   }
 }
 

@@ -40,15 +40,27 @@ export function DialogContent({
    */
   onCloseAutoFocus?: (event: Event) => void;
 }) {
+  /*
+   * The panel is a column with a scrolling body and a fixed header and footer.
+   *
+   * It used to be one scrolling box, so on a phone the footer — which holds the
+   * actions for dismissing a lead, "Skip this one" and "Close" — sat below the
+   * fold and could only be reached by scrolling the whole modal past its own
+   * content. A control you have to hunt for is a control most people never press.
+   * The body scrolls; the two bars do not, so the controls stay where they were
+   * put.
+   */
+  const bars = size === 'lg' ? 'px-7' : '';
+
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="dialog-overlay fixed inset-0 z-50" />
       <DialogPrimitive.Content
         onCloseAutoFocus={onCloseAutoFocus}
         className={[
-          'dialog-panel fixed left-1/2 top-1/2 z-50 w-[min(94vw,1000px)] -translate-x-1/2 -translate-y-1/2',
+          'dialog-panel fixed left-1/2 top-1/2 z-50 flex w-[min(94vw,1000px)] -translate-x-1/2 -translate-y-1/2 flex-col',
           size === 'lg' ? 'max-h-[88vh]' : 'max-h-[86vh]',
-          'overflow-y-auto border border-ink bg-paper text-ink',
+          'border border-ink bg-paper text-ink',
           size === 'lg' ? 'p-0' : 'p-7',
           className,
         ]
@@ -62,7 +74,7 @@ export function DialogContent({
         */}
         <header
           className={[
-            'flex items-start justify-between gap-4',
+            'flex shrink-0 items-start justify-between gap-4',
             size === 'lg' ? 'px-7 pb-5 pt-6' : '',
           ]
             .filter(Boolean)
@@ -90,9 +102,44 @@ export function DialogContent({
           </DialogPrimitive.Close>
         </header>
 
-        <div className={size === 'lg' ? '' : 'mt-6'}>{children}</div>
+        <div
+          className={[
+            'min-h-0 flex-1 overflow-y-auto',
+            // The scrolling body must not swallow a scroll from the page behind.
+            'overscroll-contain',
+            size === 'lg' ? '' : 'mt-6',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {children}
+        </div>
 
-        {footer && <footer className="mt-6 flex flex-wrap gap-3">{footer}</footer>}
+        {/*
+          The large variant has no outer padding, so the footer supplies its own —
+          the same inset the header uses. Without it the last row of buttons sat
+          flush against the panel's bottom border, and the hard shadows they carry
+          were clipped along that edge.
+        */}
+        {footer && (
+          <footer
+            className={[
+              /*
+               * Two even columns on a phone, one wrapping row from `sm` up.
+               * Left to wrap on its own, four buttons of different widths landed
+               * as 2-1-1, which reads as a mistake even when every button is
+               * perfectly reachable.
+               */
+              'grid shrink-0 grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center',
+              size === 'lg' ? 'px-7 pb-6 pt-5' : 'mt-6',
+              bars,
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {footer}
+          </footer>
+        )}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );

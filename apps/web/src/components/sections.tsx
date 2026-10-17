@@ -166,7 +166,6 @@ export function Footer() {
       links: [
         { label: 'Settings', to: '/settings' },
         { label: 'Health and keys', to: '/settings#health' },
-        { label: 'Styleguide', to: '/styleguide' },
       ],
     },
   ];
