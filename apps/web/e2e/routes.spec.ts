@@ -5,12 +5,20 @@ import { attachScreenshot, checkA11y } from './a11y.js';
  * Load a route with the app interactive.
  *
  * `goto` resolves on `load`, which against the dev server is before the bundle
- * has executed. Assertions on a heading pass on server-rendered markup, but a
+ * has executed. Assertions on a heading pass on already-painted markup, but a
  * click or a Tab press in that window hits nodes with no handlers attached.
+ * The app's own first data fetch is the signal that React is live.
  */
 async function openApp(page: Page, path: string): Promise<void> {
-  await page.goto(path, { waitUntil: 'networkidle' });
+  const firstFetch = page.waitForResponse(
+    (response) => response.url().includes('/api/') && response.status() === 200,
+    { timeout: 15_000 },
+  );
+
+  await page.goto(path, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { level: 1 }).waitFor();
+  // Routes with no data fetch never resolve this, so it is not awaited.
+  await firstFetch.catch(() => undefined);
 }
 
 /**

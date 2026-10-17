@@ -13,19 +13,30 @@ import { attachScreenshot, checkA11y } from './a11y.js';
 const API = 'http://127.0.0.1:8788';
 
 /**
- * Load a route with the app fully interactive.
+ * Load a route with the app interactive.
  *
  * `goto` alone resolves on `load`, which against a dev server is before the
  * bundle has executed. Filling and clicking in that window hits real DOM nodes
  * with no React handlers attached, so the typed value never reaches component
  * state and the submit button does nothing. The failure looks like an
  * application bug and is a test bug.
+ *
+ * The readiness signal is the app's own first data fetch. Waiting for it means
+ * React has mounted, its effects have run, and the handlers exist. Waiting for
+ * the heading instead is not enough: server-rendered or already-painted markup
+ * satisfies that long before the bundle is live.
  */
 async function openApp(page: Page, path: string): Promise<void> {
-  await page.goto(path, { waitUntil: 'networkidle' });
-  // The heading only exists once React has rendered, which is the signal that
-  // handlers are attached.
+  const firstFetch = page.waitForResponse(
+    (response) => response.url().includes('/api/') && response.status() === 200,
+    { timeout: 15_000 },
+  );
+
+  await page.goto(path, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { level: 1 }).waitFor();
+  // Routes with no data fetch never resolve this, so it is not awaited; where it
+  // does happen, the click that follows is guaranteed to have handlers.
+  await firstFetch.catch(() => undefined);
 }
 
 /** Wait for a run to finish, however it finished. */
@@ -44,17 +55,40 @@ async function waitForRun(page: Page, runId: string): Promise<void> {
     .toMatch(/completed|failed/);
 }
 
+/**
+ * Submit the search and wait for the request it causes.
+ *
+ * Waiting on the POST is the contract that actually matters, and it is far
+ * steadier than waiting on a status line. A click can land before React has
+ * attached its handlers, in which case the UI does nothing and an assertion on
+ * the rendered status simply times out with a misleading message. Waiting on the
+ * request fails immediately and says the submit never happened.
+ */
+async function submitSearch(page: Page, query: string): Promise<void> {
+  const field = page.getByPlaceholder('Plumbers in Bhopal');
+  await field.click();
+  await field.pressSequentially(query, { delay: 10 });
+  await expect(field).toHaveValue(query);
+
+  const started = page.waitForResponse(
+    (response) => response.url().endsWith('/api/runs') && response.request().method() === 'POST',
+    { timeout: 15_000 },
+  );
+
+  await page.getByRole('button', { name: /find leads/i }).click();
+  await started;
+}
+
 test('a search produces a lead with an audit and a draft', async ({ page }, testInfo) => {
   await openApp(page, '/');
 
-  await page.getByPlaceholder('Plumbers in Bhopal').pressSequentially('plumber in Bhopal');
-  await page.getByRole('button', { name: /find leads/i }).click();
+  await submitSearch(page, 'plumber in Bhopal');
 
-  // The status line is the live run feed, so it is the honest signal that
-  // something is happening rather than a fixed-delay sleep.
+  // The status line is the live run feed, so once the run exists it must stop
+  // claiming there are no leads.
   const status = page.locator('[aria-live="polite"]');
   await expect(status).not.toHaveText('No leads yet. Search for a business type and a city.', {
-    timeout: 30_000,
+    timeout: 15_000,
   });
 
   const runs = await (await page.request.get(`${API}/api/runs?limit=1`)).json();
@@ -144,7 +178,9 @@ test('a search without a city is rejected with an example, not a guess', async (
 }, testInfo) => {
   await openApp(page, '/');
 
-  await page.getByPlaceholder('Plumbers in Bhopal').pressSequentially('plumbers');
+  const field = page.getByPlaceholder('Plumbers in Bhopal');
+  await field.click();
+  await field.pressSequentially('plumbers', { delay: 10 });
   await page.getByRole('button', { name: /find leads/i }).click();
 
   // The user is told the format rather than having a city inferred, because an
