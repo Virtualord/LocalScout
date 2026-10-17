@@ -21,6 +21,23 @@ export interface LeadCardProps {
   onOpen?: (id: string) => void;
 }
 
+/**
+ * Every card in the list is this tall.
+ *
+ * A card's natural height depends on what it happens to know: an address long
+ * enough to wrap costs an extra line, and a lead with nothing to report has no
+ * finding line at all. Grid rows are independent, so those differences did not
+ * average out — they made rows of 166px, 148px and 164px in the same grid, and a
+ * card with less to say looked like a card that mattered less.
+ *
+ * A floor rather than a fixed height, on purpose: the lines above the finding are
+ * each pinned to one line (the address truncates, the title truncates, the chips
+ * are one row), so every card's content is the same shape and this floor is
+ * exactly that shape. Anything genuinely taller — a fourth chip forcing a second
+ * row, say — still grows rather than clipping its own content.
+ */
+const CARD_MIN_HEIGHT = 'min-h-[152px]';
+
 /** The single sentence a lead card shows about its worst problem. */
 export function topFindingLine(lead: LeadSummary): string | undefined {
   if (lead.status === 'discovered') return 'Not audited yet';
@@ -51,10 +68,17 @@ export function LeadCard({ lead, onOpen }: LeadCardProps) {
 
         <h3 className="display-card mt-3 truncate text-ink">{lead.name}</h3>
 
+        {/*
+          One line, always. This line wrapping to two is what made some cards
+          taller than others, and the full address is in the modal — which is
+          where someone goes to read it, rather than squinting at a card.
+        */}
         <p className="mono mt-1.5 flex items-center gap-2 text-[12px] text-ink/65">
-          <span className="inline-block size-2 bg-ink/40" aria-hidden="true" />
-          {lead.category ?? 'Business'}
-          {lead.address ? ` · ${lead.address}` : ''}
+          <span className="inline-block size-2 shrink-0 bg-ink/40" aria-hidden="true" />
+          <span className="min-w-0 truncate">
+            {lead.category ?? 'Business'}
+            {lead.address ? ` · ${lead.address}` : ''}
+          </span>
         </p>
 
         {finding && <p className="mt-2 text-[13px] leading-snug text-ink/80">{finding}</p>}
@@ -64,10 +88,7 @@ export function LeadCard({ lead, onOpen }: LeadCardProps) {
     </>
   );
 
-  const className = [
-    'flex items-start justify-between gap-5 p-5',
-    // Press-in on the whole card, which is the reference's signature.
-  ].join(' ');
+  const className = ['flex items-start justify-between gap-5 p-5', CARD_MIN_HEIGHT].join(' ');
 
   if (onOpen) {
     return (
@@ -127,10 +148,16 @@ export function StatusChip({ status }: { status: LeadSummary['status'] }) {
   return <Chip variant="neutral">New</Chip>;
 }
 
-/** The dashed "run another search" card, always last in a grid. */
+/**
+ * The dashed "run another search" card, always last in a grid.
+ *
+ * The same height as a lead card, for the same reason: it sits in the last row of
+ * the same grid, and a card 60px shorter than the one above it reads as a
+ * mistake rather than as a lighter kind of card.
+ */
 export function NewSearchCard() {
   return (
-    <DashedCtaLink href="/">
+    <DashedCtaLink href="/" className={`${CARD_MIN_HEIGHT} flex flex-col justify-center`}>
       <span className="display-card block">Run another search.</span>
       <span className="mt-2 block text-[14px] text-ink/70">
         Try a different business type or city.
