@@ -107,7 +107,7 @@ export function LeadsScreen() {
 
         {!isPending && !isError && leads.length > 0 && (
           <>
-            {filters.view === 'map' ? (
+            {filters.view === 'map' && (
               <section aria-label="Lead map" className="mt-8">
                 <PixelMap leads={mapLeads} onSelect={(id) => setFilters({ openLeadId: id })} />
                 <p className="mono mt-4 text-[12px] text-ink/60">
@@ -116,34 +116,27 @@ export function LeadsScreen() {
                   score.
                 </p>
               </section>
-            ) : (
-              <ul className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {leads.map((lead) => (
-                  <li key={lead.id} className="flex">
-                    <div className="flex w-full">
-                      <LeadCard lead={lead} onOpen={(id) => setFilters({ openLeadId: id })} />
-                    </div>
-                  </li>
-                ))}
-                <li className="flex">
-                  <div className="flex w-full">
-                    <NewSearchCard />
-                  </div>
-                </li>
-              </ul>
             )}
 
-            {filters.view === 'map' && (
-              <ul className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {leads.map((lead) => (
-                  <li key={lead.id} className="flex">
-                    <div className="flex w-full">
-                      <LeadCard lead={lead} onOpen={(id) => setFilters({ openLeadId: id })} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/*
+             * One list under both views. It used to be written out twice, and the
+             * copy under the map was missing the "run another search" card — so
+             * the card appeared and disappeared with the view toggle.
+             */}
+            <ul className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {leads.map((lead) => (
+                <li key={lead.id} className="flex">
+                  <div className="flex w-full">
+                    <LeadCard lead={lead} onOpen={(id) => setFilters({ openLeadId: id })} />
+                  </div>
+                </li>
+              ))}
+              <li className="flex">
+                <div className="flex w-full">
+                  <NewSearchCard />
+                </div>
+              </li>
+            </ul>
           </>
         )}
       </div>
