@@ -230,6 +230,43 @@ describe('api', () => {
       expect(body.runId).toBe(runId);
       expect(body.error).toContain('already running');
     });
+
+    /*
+     * The cap used to be read off the `content-length` header alone, so a
+     * request that declared no length measured as zero and went through.
+     */
+    it('refuses a body larger than the cap', async () => {
+      const response = await app.fetch(
+        new Request('http://127.0.0.1/api/runs', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ query: 'x'.repeat(70 * 1024), location: 'Bhopal' }),
+        }),
+      );
+      expect(response.status).toBe(413);
+    });
+
+    it('refuses a chunked body that declares no length at all', async () => {
+      const chunk = new TextEncoder().encode(
+        JSON.stringify({ query: 'plumbers', location: 'x'.repeat(70 * 1024) }),
+      );
+
+      const response = await app.fetch(
+        new Request('http://127.0.0.1/api/runs', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'transfer-encoding': 'chunked' },
+          body: new ReadableStream({
+            start(controller) {
+              controller.enqueue(chunk);
+              controller.close();
+            },
+          }),
+          duplex: 'half',
+        }),
+      );
+
+      expect(response.status).toBe(413);
+    });
   });
 
   /*

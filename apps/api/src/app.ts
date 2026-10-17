@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { logger as honoLogger } from 'hono/logger';
 import type { AppRuntime } from './runtime.js';
@@ -49,18 +50,23 @@ export function createApp(runtime: AppRuntime): Hono {
     c.header('Cache-Control', 'no-store');
   });
 
-  // A run search is a small JSON body; anything larger is a mistake or an
-  // attempt to exhaust memory.
-  app.use('*', async (c, next) => {
-    const length = Number(c.req.header('content-length') ?? '0');
-    if (Number.isFinite(length) && length > 64 * 1024) {
-      return c.json({ error: 'Request body is too large.' }, 413);
-    }
-    await next();
-    // Explicit: `noImplicitReturns` is on, and a middleware that may short
-    // circuit has to return a Response on that path.
-    return undefined;
-  });
+  /*
+   * A run search is a small JSON body; anything larger is a mistake or an
+   * attempt to exhaust memory.
+   *
+   * Hono's middleware rather than a peek at `content-length`, which is what this
+   * used to do. A request sent with `transfer-encoding: chunked` carries no
+   * length header at all, so the header read as 0 and the body went through
+   * unmeasured. This still trusts a declared length, but counts the bytes as
+   * they arrive whenever there is no length to trust.
+   */
+  app.use(
+    '*',
+    bodyLimit({
+      maxSize: 64 * 1024,
+      onError: (c) => c.json({ error: 'Request body is too large.' }, 413),
+    }),
+  );
 
   app.use('*', honoLogger());
 
