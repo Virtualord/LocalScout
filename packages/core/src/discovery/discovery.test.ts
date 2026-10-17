@@ -109,10 +109,34 @@ describe('serpapi client', () => {
   it('builds a google maps request url with the key', () => {
     const url = new URL(buildSearchUrl(request, 'secret-key'));
     expect(url.searchParams.get('engine')).toBe('google_maps');
-    expect(url.searchParams.get('q')).toBe('plumbers in Bhopal');
-    expect(url.searchParams.get('ll')).toBe('Bhopal');
+    expect(url.searchParams.get('type')).toBe('search');
+    expect(url.searchParams.get('q')).toBe('plumbers');
     expect(url.searchParams.get('gl')).toBe('in');
     expect(url.searchParams.get('api_key')).toBe('secret-key');
+  });
+
+  /*
+   * The place goes in `location` with a zoom, never in `ll`.
+   *
+   * `ll` is the coordinates parameter and must read `@23.2599,77.4126,12z`. This
+   * builder used to put the city name there, and SerpApi answered every live
+   * search with "Invalid format of the `ll` parameter" — so live discovery had
+   * never worked, and this test passed the whole time because it asserted the
+   * broken value. These two assertions are the reason it cannot recur: `ll` is
+   * asserted absent, and `location` is asserted present with the zoom SerpApi
+   * requires alongside it.
+   */
+  it('sends the place in location with a zoom, never a bare place name in ll', () => {
+    const url = new URL(buildSearchUrl(request, 'secret-key'));
+
+    expect(url.searchParams.get('location')).toBe('Bhopal');
+    expect(url.searchParams.has('ll')).toBe(false);
+
+    // SerpApi rejects `location` without `z` or `m`, so the zoom is load-bearing
+    // rather than a tuning knob.
+    expect(url.searchParams.get('z')).toMatch(/^\d+$/);
+    expect(Number(url.searchParams.get('z'))).toBeGreaterThanOrEqual(3);
+    expect(Number(url.searchParams.get('z'))).toBeLessThanOrEqual(30);
   });
 
   it('never puts the api key in the cache key', () => {

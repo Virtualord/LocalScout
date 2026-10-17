@@ -49,13 +49,74 @@ export interface SearchOutcome {
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
-/** Build the SerpApi request URL for a Google Maps search. */
+/**
+ * Explain a failed SerpApi call in terms of what to do next.
+ *
+ * SerpApi puts the reason in the body — `{"error": "Invalid format of the `ll`
+ * parameter."}` — and that sentence is more useful than any status code, because
+ * it distinguishes a malformed request from a bad key. Discarding it is what let
+ * a bug in the request builder present as "check your API key" for as long as
+ * live mode existed. Read defensively: an error response is not guaranteed to be
+ * JSON, and a proxy in between can return HTML.
+ */
+async function describeHttpError(response: Response): Promise<string> {
+  let detail: string | undefined;
+  try {
+    const body = (await response.json()) as { error?: unknown };
+    if (typeof body.error === 'string' && body.error.length > 0) {
+      // Bounded: this text is stored on the run and rendered in the UI.
+      detail = body.error.slice(0, 200);
+    }
+  } catch {
+    // Not JSON, or already consumed. The status-based message still stands.
+  }
+
+  const reason =
+    response.status === 401 || response.status === 403
+      ? 'the key was rejected'
+      : response.status === 429
+        ? 'the rate limit or monthly quota is exhausted'
+        : response.status >= 500
+          ? 'SerpApi had a server error'
+          : 'the request was rejected as malformed';
+
+  return detail === undefined
+    ? `SerpApi returned ${response.status} and ${reason}.`
+    : `SerpApi returned ${response.status}: ${detail}`;
+}
+
+/**
+ * How far in to centre a place-name search.
+ *
+ * Required, and not optional detail: SerpApi rejects `location` without `z` or
+ * `m` ("Missing `z` or `m` parameter"), and the two are mutually exclusive with
+ * `ll`. 12 is roughly a city: wide enough that a neighbourhood business is
+ * included, tight enough that a search for one city does not return its
+ * neighbours.
+ */
+const DEFAULT_ZOOM = 12;
+
+/**
+ * Build the SerpApi request URL for a Google Maps search.
+ *
+ * The place goes in `location`, paired with `z`, because that is the form SerpApi
+ * documents for a search by place name. This used to send the city in `ll`, which
+ * is the *coordinates* parameter and must look like `@23.2599,77.4126,12z`;
+ * SerpApi answered every live search with "Invalid format of the `ll`
+ * parameter", so live discovery had never once worked. The unit test asserted
+ * the broken value, which is how it stayed broken.
+ *
+ * `ll` would need geocoding to fill in, and the free SerpApi plan exposes no
+ * geocoding engine, so `location` is the route that works on the plan this
+ * project is used on.
+ */
 export function buildSearchUrl(request: SearchRequest, apiKey: string): string {
   const url = new URL('https://serpapi.com/search.json');
   url.searchParams.set('engine', 'google_maps');
   url.searchParams.set('type', 'search');
-  url.searchParams.set('q', `${request.query} in ${request.location}`);
-  url.searchParams.set('ll', request.location);
+  url.searchParams.set('q', request.query);
+  url.searchParams.set('location', request.location);
+  url.searchParams.set('z', String(DEFAULT_ZOOM));
   url.searchParams.set('gl', request.country.toLowerCase());
   url.searchParams.set('hl', 'en');
   url.searchParams.set('api_key', apiKey);
@@ -65,13 +126,16 @@ export function buildSearchUrl(request: SearchRequest, apiKey: string): string {
 /**
  * A stable cache key for a request.
  *
- * The API key is deliberately excluded: rotating a key must not invalidate a
- * cached response, and a key must never reach a filename.
+ * Every parameter that changes what comes back is in it, and nothing else is. The
+ * API key is deliberately excluded: rotating a key must not invalidate a cached
+ * response, and a key must never reach a filename.
  */
 export function cacheKeyFor(request: SearchRequest): string {
   const canonical = JSON.stringify({
     q: request.query.trim().toLowerCase(),
-    ll: request.location.trim().toLowerCase(),
+    // `location` rather than `ll`, matching what is actually sent.
+    location: request.location.trim().toLowerCase(),
+    z: DEFAULT_ZOOM,
     gl: request.country.trim().toLowerCase(),
     hl: request.language ?? 'en',
   });
@@ -125,7 +189,7 @@ export async function searchGoogleMaps(
         { response: { local_results: [] }, fromCache: false, cacheStatus: 'miss', requestUrl },
         {
           code: 'serpapi_http_error',
-          message: `SerpApi returned ${response.status}. Check that SERPAPI_API_KEY is valid and the account has remaining searches.`,
+          message: await describeHttpError(response),
         },
         Date.now() - started,
         ['serpapi'],

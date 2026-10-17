@@ -79,6 +79,21 @@ now works.
   `google.com/urls` spells a path, and a hostname never contains a slash, so it
   could never match. The redundant subdomain entries went with it — a subdomain
   already matches through its parent host.
+- **Live discovery never worked, whatever key you had.** The SerpApi request sent
+  the city in `ll`, which is the _coordinates_ parameter and must read
+  `@23.2599,77.4126,12z`; SerpApi answered every request with "Invalid format of
+  the `ll` parameter". A place name belongs in `location` paired with `z`, and
+  that is what is sent now — verified against the live API, returning real
+  businesses. The test asserted the broken value, which is how it survived. The
+  error message no longer blames the API key for a malformed request either: it
+  reports what SerpApi said in the body, which is the sentence that actually
+  explains the failure.
+- **Nothing read `.env`.** The README, the settings screen, the health check's own
+  advice and the manual all say to put the key there, and no code opened the
+  file — so following the instructions exactly produced an app that reported no
+  key, with nothing in the logs to say why. It is read at boot now, from the
+  repository root whichever directory the command ran from, without overriding a
+  variable already in the environment.
 - The `ssrf.ts` header claimed the resolved address was pinned for the request.
   It is checked, not pinned; the comments now say so and ADR-0002 records the
   residual.
@@ -100,12 +115,13 @@ now works.
 
 ### Quality
 
-- 887 fast tests and 5 slow ones. New coverage where it was thinnest: the search
+- 892 fast tests and 5 slow ones. New coverage where it was thinnest: the search
   flow on the home screen, the leads screen in both views, the runs screen's stop
   control, the lead modal's language switcher, the map (repaints, the pinned
-  projection box, and the spotlight's entry, easing and fade-out), and the design
+  projection box, and the spotlight's entry, easing and fade-out), the design
   primitives' focus ring — asserted in the browser as a computed style, since
-  jsdom has no cascade to test.
+  jsdom has no cascade to test — and `.env` loading, including that a shell
+  variable still wins over the file.
 
 ## [0.1.0] - 2026-10-13
 

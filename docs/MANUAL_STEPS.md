@@ -66,16 +66,31 @@ tier is roughly 250 searches a month.
 
 1. Sign up at <https://serpapi.io>.
 2. Copy the API key from the dashboard.
-3. Put it in `.env`:
+3. Create `.env` by copying `.env.example`, which is the template listing every
+   setting with its default:
 
-```
-DISCOVERY_MODE=live
-SERPAPI_API_KEY=your_key_here
-```
+   ```bash
+   cp .env.example .env
+   ```
 
-**Never commit `.env`.** A pre-commit hook fails the commit if a key-shaped
-string is staged. Responses are cached on disk by a hash of the request, so
-re-running the same search costs nothing.
+4. Put the key in `.env` and switch discovery on:
+
+   ```
+   DISCOVERY_MODE=live
+   SERPAPI_API_KEY=your_key_here
+   ```
+
+5. Restart `pnpm dev`. The banner prints `Discovery: live`, and the Settings
+   screen says a SerpApi key is set.
+
+The file is read at startup from the repository root, whichever directory the
+command was launched from. A variable already exported in your shell wins over
+the file, so `SERPAPI_API_KEY=... pnpm dev` still works.
+
+**Never commit `.env`.** It is git-ignored, and a pre-commit hook fails the
+commit if a key-shaped string is staged. Responses are cached on disk by a hash
+of the request, so re-running the same search costs nothing — one search per
+distinct query-and-city pair, and 250 a month on the free tier.
 
 ## 4. Fill in your sender profile
 

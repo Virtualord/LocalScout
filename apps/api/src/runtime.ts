@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Logger } from 'pino';
 import {
   FixtureProvider,
@@ -104,9 +105,79 @@ export interface BootOptions {
   prettyLogs?: boolean;
   /** Skip migrations, when the caller already applied them. */
   skipMigrations?: boolean;
+  /** Skip reading `.env`, when the caller supplied its own environment. */
+  skipEnvFile?: boolean;
+}
+
+/**
+ * The `.env` file, if there is one.
+ *
+ * Every instruction this project gives about configuration says "put the key in
+ * `.env`" — the README, the settings screen, the health check's own advice and
+ * `MANUAL_STEPS.md` — and until now nothing read the file. A user who followed
+ * those instructions exactly would fill in the key, restart, and be told they had
+ * no key, with nothing in the logs to say why. So it is read here, in the one
+ * function every entry point goes through.
+ *
+ * Node's own `process.loadEnvFile`, not a dependency: it is the same parser the
+ * `--env-file` flag uses, so there is one definition of what the file means
+ * rather than two that disagree on quoting. It does not overwrite variables
+ * already in the environment, which is what makes `SERPAPI_API_KEY=... pnpm dev`
+ * still work and keeps a CI-injected value authoritative.
+ *
+ * A missing file is the normal case and is not an error: the app is built to run
+ * with no keys at all. A file that exists but cannot be parsed *is* an error,
+ * because silently ignoring it means a typo in the one line the user cares about
+ * costs them a debugging session.
+ */
+function loadEnvFile(envFile: string): void {
+  try {
+    process.loadEnvFile(envFile);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') return;
+    throw new Error(
+      `Could not read ${envFile}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
+}
+
+/**
+ * Where the file is, which is not the working directory.
+ *
+ * `pnpm dev` starts the API from `apps/api`, so `.` is `apps/api` and the `.env`
+ * at the repository root — the file `.env.example` sits beside, and the one every
+ * instruction in this project names — would never be found. Walking up from the
+ * module's own directory rather than from `process.cwd()` also means it is found
+ * whichever package directory the command was launched from, and it stops at the
+ * repository root instead of reading a `.env` belonging to something further up
+ * the filesystem.
+ */
+function resolveEnvFile(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (let depth = 0; depth < 5; depth += 1) {
+    const candidate = join(dir, '.env');
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Nothing found: return the repo-root path anyway so the ENOENT branch above
+  // treats it as "no keys", which is the normal case and not an error.
+  return join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env');
 }
 
 export function boot(env: NodeJS.ProcessEnv = process.env, options: BootOptions = {}): AppRuntime {
+  /*
+   * Read `.env` before anything reads the environment, so every later line in
+   * this function sees the values the user wrote. Skipped when the caller passes
+   * its own environment object — the tests do, and they have no file to read.
+   */
+  if (options.skipEnvFile !== true && env === process.env) {
+    loadEnvFile(resolveEnvFile());
+  }
+
   /*
    * A configuration error is thrown, not printed and exited on.
    *
