@@ -257,7 +257,6 @@ export const api = {
       audit: AuditSummary | null;
       drafts: Partial<Record<Language, DraftSummary>>;
       contactLog: ContactLogEntry[];
-      counts: Record<LeadStatus, number>;
     }>(`/leads/${id}`),
 
   updateLead: (id: string, patch: { status?: LeadStatus; notes?: string }) =>

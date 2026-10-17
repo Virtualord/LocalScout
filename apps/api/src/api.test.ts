@@ -289,6 +289,54 @@ describe('api', () => {
       expect(body.leads[0]?.id).toBe(lead.id);
     });
 
+    /*
+     * The total used to be every lead in the database, so a filtered view of one
+     * lead still reported two and the pager offered a second page of nothing.
+     */
+    it('reports a total that matches the filters', async () => {
+      const sent = await seed({ name: 'Sent Co' });
+      await seed({ name: 'Other Co' });
+      await runtime.repos.leads.setStatus(sent.id, 'sent');
+
+      const filtered = (await (await get('/api/leads?status=sent')).json()) as {
+        leads: unknown[];
+        total: number;
+      };
+      expect(filtered.total).toBe(1);
+      expect(filtered.leads).toHaveLength(1);
+
+      const searched = (await (await get('/api/leads?q=sent')).json()) as { total: number };
+      expect(searched.total).toBe(1);
+
+      const nothing = (await (await get('/api/leads?q=nobody')).json()) as { total: number };
+      expect(nothing.total).toBe(0);
+
+      const all = (await (await get('/api/leads')).json()) as { total: number };
+      expect(all.total).toBe(2);
+    });
+
+    it('counts a minimum score the same way the list filters it', async () => {
+      const hot = await seed({ name: 'Hot' });
+      await seed({ name: 'Cold' });
+      await runtime.repos.audits.create({
+        leadId: hot.id,
+        status: 'ok',
+        startedAt: new Date(),
+        durationMs: 100,
+        metrics: {},
+        checks: [],
+        findings: [],
+        opportunityScore: 82,
+      });
+
+      const body = (await (await get('/api/leads?minScore=50')).json()) as {
+        leads: { name: string }[];
+        total: number;
+      };
+      expect(body.total).toBe(1);
+      expect(body.leads.map((lead) => lead.name)).toEqual(['Hot']);
+    });
+
     it('searches by name', async () => {
       await seed({ name: 'Sharma Plumbing' });
       await seed({ name: 'Gupta Interiors' });

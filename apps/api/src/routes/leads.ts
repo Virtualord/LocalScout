@@ -64,16 +64,24 @@ export function registerLeadRoutes(app: Hono, runtime: AppRuntime): void {
     }
 
     const filters = parsed.data;
-    const leads = await repos.leads.list({
+
+    // One set of conditions, used for the page and for its total. A total
+    // computed from different conditions than the rows it counts is worse than
+    // no total: it is a number that looks like an answer.
+    const matching = {
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.minScore !== undefined ? { minScore: filters.minScore } : {}),
       ...(filters.q ? { q: filters.q } : {}),
+    };
+
+    const leads = await repos.leads.list({
+      ...matching,
       sort: filters.sort,
       limit: filters.limit,
       offset: filters.offset,
     });
 
-    const total = await repos.leads.total();
+    const total = await repos.leads.count(matching);
     return c.json({ leads, total });
   });
 
@@ -84,14 +92,20 @@ export function registerLeadRoutes(app: Hono, runtime: AppRuntime): void {
     const lead = await repos.leads.summaryById(c.req.param('id'));
     if (!lead) return c.json({ error: `No lead with id ${c.req.param('id')}.` }, 404);
 
-    const [audit, drafts, log, counts] = await Promise.all([
+    /*
+     * No status counts here. They used to be returned on this response and read
+     * by nothing, which meant every modal open ran a GROUP BY over the whole
+     * leads table to build an object that was then discarded. The dashboard's
+     * numbers come from `/api/metrics`, which is where a table-wide aggregate
+     * belongs.
+     */
+    const [audit, drafts, log] = await Promise.all([
       repos.audits.latestForLead(lead.id),
       repos.drafts.latestByLanguageForLead(lead.id),
       repos.contactLog.listForLead(lead.id),
-      repos.leads.countByStatus(),
     ]);
 
-    return c.json({ lead, audit: audit ?? null, drafts, contactLog: log, counts });
+    return c.json({ lead, audit: audit ?? null, drafts, contactLog: log });
   });
 
   app.patch('/api/leads/:id', async (c) => {
