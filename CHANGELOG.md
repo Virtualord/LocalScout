@@ -7,7 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+An audit pass over the whole codebase, and the two user-visible things it turned
+up: a run can be stopped, and the map's spotlight — which had never once drawn —
+now works.
+
+### Added
+
+- **Stop a search.** `POST /api/runs/:id/cancel` and a button on the runs screen.
+  Cancellation is cooperative: the audit already in flight finishes and stays on
+  the record, and nothing after it starts. The refusal a second search gets while
+  one is running has always told the user to stop the first one from the runs
+  screen, and until now there was no control there to do it with.
+- **Reaping.** A run whose process died stayed `running` forever, which refused
+  every later search until the row was edited by hand. The API now marks those
+  runs failed at boot and at shutdown, with the reason written into the row.
+
+### Changed
+
+- The map grid is wider (96×28 on desktop, 40×24 on mobile), cell size is derived
+  from the grid so squares stay square at any width, and the map runs the full
+  width of the page.
+- The home hero is centred.
+- A lead card with no measurement says "not measured" instead of a bare dash,
+  which read as a zero.
+- The single-lead response no longer carries a `counts` block that no screen
+  read.
+- `boot()` throws a `ConfigError` instead of printing it and calling
+  `process.exit`, so the CLI, the API and the tests each decide what to do with a
+  bad configuration.
+
+### Fixed
+
+- **The spotlight never appeared.** Its position was copied into refs by one
+  effect and read by another whose dependencies were only the layout and the
+  size, so the land was painted once and never again. The draw now depends on the
+  light as two numbers — and resizes the canvas only when the size actually
+  changed, which it had to, or the fix would have reallocated a full-screen
+  bitmap on every frame.
+- **The map's projection box pinned nothing.** It was captured by a `useState`
+  initializer that ran before the first search answered, so it pinned "no box"
+  for the life of the screen and every later batch of leads re-derived one, moving
+  every square already on the map. A lead far outside the pinned box also
+  projected thousands of cells off-grid, where the placement search could not
+  reach it, and was dropped from the map in silence; it now lands at the nearest
+  edge.
+- **The draft language could not be picked.** The switcher rendered only when a
+  draft already existed, so with nothing written there was no way to ask for
+  Hindi or Hinglish at all — and the request hardcoded English even though the
+  API had always accepted a language.
+- **The lead list was written out twice**, and the copy under the map had lost
+  the "run another search" card, so the card came and went with the view toggle.
+- **A request body was capped by its `content-length` header alone.** A chunked
+  body declaring no length was unbounded. The cap now counts bytes as they
+  arrive.
+- **Workflow dependencies were module-level singletons.** A run's cancellation
+  signal, event sink and logger were overwritten by whichever run started last in
+  the same process. They are keyed by run id.
+- **Listing leads loaded every row to show one page of them.** Filtering, sorting
+  and paging moved into SQL, and the total is counted with the same conditions
+  the page used, so a filtered list and its count can no longer disagree.
+- **The audit body was buffered whole before its cap was applied**, so the cap
+  bounded what was kept rather than what was read. It streams now.
+- **SSE progress buffers were kept for every run the process had ever served.**
+  A finished run's buffer is dropped after five minutes, and at most twenty are
+  held.
+- The directory-host exclusion list carried duplicates and one unreachable entry:
+  `google.com/urls` spells a path, and a hostname never contains a slash, so it
+  could never match. The redundant subdomain entries went with it — a subdomain
+  already matches through its parent host.
+- The `ssrf.ts` header claimed the resolved address was pinned for the request.
+  It is checked, not pinned; the comments now say so and ADR-0002 records the
+  residual.
+
+### Quality
+
+- 880 fast tests and 5 slow ones. New coverage where it was thinnest: the search
+  flow on the home screen, the leads screen in both views, the runs screen's stop
+  control, the lead modal's language switcher, and the map (repaints, the pinned
+  projection box, and the spotlight's entry, easing and fade-out).
 
 ## [0.1.0] - 2026-10-13
 

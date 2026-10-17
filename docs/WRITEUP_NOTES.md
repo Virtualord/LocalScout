@@ -66,9 +66,58 @@ A full run over the 35 recorded listings, Bhopal:
 | Drafts written      | 9                                   |
 | Discovery cost      | 0 SerpApi calls (recorded fixtures) |
 
-The three failures were real websites unreachable from the sandbox. They are
-recorded as `failed` with no audit row and no score, because nothing was measured.
-Reporting them as "score 0" would have been a fabrication.
+The three failures are fixture domains that do not resolve. They are invented
+domains in the recorded data — `getent hosts` finds nothing for
+`sharmaplumbing.in`, `sagarpest.in` or `aashirwadtailors.com`, while the four
+sibling domains in the same file do resolve — so the guard refuses them with
+`dns_failure` before any request is made, in any environment. That is a property
+of the recorded data, not of the sandbox it was measured in.
+
+Each failure is still recorded: an `unavailable` audit row carrying the reason.
+The internal score on that row is a placeholder, and every read maps it to null
+rather than a number, because nothing was measured. Reporting those three as
+"score 0" would have been a fabrication, and so would calling them unaudited —
+the attempt itself is part of the record.
+
+The run was repeated after the audit pass in this repository's own history, and
+the table reproduced exactly: 12 discovered, 12 inserted, 9 audited, 3 failed,
+9 drafts. The counts above are the current behaviour, not a record of a version
+that has since drifted.
+
+## A Lighthouse audit, end to end
+
+Measured in an environment with Chrome installed, over a fixture lead whose
+domain does resolve:
+
+```sh
+cd apps/api && DATA_DIR=/tmp/opencode/chrome-audit pnpm exec tsx src/cli.ts "interior" Bhopal --limit 3
+```
+
+| Item                                       | Value                                                       |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| Audit duration                             | 20.7 s                                                      |
+| LCP                                        | 8069 ms                                                     |
+| CLS                                        | 0                                                           |
+| TBT                                        | 0 ms                                                        |
+| Lighthouse performance score               | 62                                                          |
+| Lighthouse SEO score                       | 82                                                          |
+| Lighthouse accessibility score             | 64                                                          |
+| Findings                                   | `SLOW_LCP` (8069 ms vs 4000 ms), `MISSING_META_DESCRIPTION` |
+| Opportunity score, from the findings above | 41                                                          |
+| Draft                                      | one, from the template                                      |
+
+Two things to read from that table. The measurements are real: the LCP is the
+site's, not a default, and the OPPORTUNITY score is derived from the findings
+rather than copied from Lighthouse's performance score. And the finding is
+honest about the boundary: 8069 ms against a 4000 ms threshold is a
+high-severity finding with the measurement attached, which is the shape every
+finding in this tool has.
+
+`pnpm test:slow` runs the same integration against local fixture sites, so the
+metric extraction, the score ordering and the missing-Chrome path are all
+exercised without a network. It passes here (5 passed, 1 skipped — the skip is
+the suite that only runs _without_ Chrome), which is what makes the numbers above
+a verification rather than a single lucky run.
 
 ## Latency
 
@@ -92,18 +141,38 @@ Reporting them as "score 0" would have been a fabrication.
 
 ## Known gaps in these measurements
 
-1. **No Lighthouse data.** Chrome was not installed in the build environment, so
-   every audit ran its HTTP and HTML checks only and reported `stale`. The
-   `SLOW_LCP`, `HIGH_TBT`, `LAYOUT_SHIFT` and `LOW_PERF_SCORE` findings are
-   covered by unit tests against recorded metrics, and the integration path is
-   tested with a stubbed runner, but no end-to-end Lighthouse run is included
-   here. `pnpm test:slow` covers it where Chrome exists.
-2. **Single model.** Only `gemma3:4b` was available, so this is not a comparison
+1. **Breadth of Lighthouse coverage.** The batch behind the pipeline table ran
+   without a browser, so its audits carry HTTP and HTML checks and no metrics.
+   That gap is closed for depth — see "A Lighthouse audit, end to end" above,
+   where a real audit ran the whole pipeline — but not for breadth: only four of
+   the seven fixture domains resolve at all, so a fixtures-mode batch can never
+   be twelve real measurements. Each metric-derived finding is covered by unit
+   tests against recorded metrics, and `pnpm test:slow` covers the integration
+   itself, including the path where Chrome is absent.
+2. **Lighthouse is flaky when two audits run at once.** The same twelve-lead batch
+   re-run with Chrome installed recorded full metrics for one of the four
+   reachable sites (Cool Air Services, 21.7 s, LCP 2361 ms, performance 86). The
+   other three show the three ways a real audit can end without numbers, and each
+   is reported as what it is:
+   - Gupta Interiors, 13.4 s, `stale`: Lighthouse could not run, and the row says
+     so; the HTTP and HTML checks in it are complete.
+   - Royal Caterers, 10.5 s, `ok`: Lighthouse ran and wrote its report, but no
+     metric could be extracted from it. The metric set is empty rather than
+     filled with zeros.
+   - Sunrise Dental Clinic, 0.4 s, `ok`: the site answered with an error status,
+     which is a `SITE_UNREACHABLE` finding — a fact about the site, not a
+     measurement that failed.
+     Two headless Chromes at the default `AUDIT_CONCURRENCY=2` starve each other on
+     this machine, which is the likeliest reason the first of those three ran
+     Lighthouse into a failure. A user who wants a metric for every lead should run
+     audits one at a time (`AUDIT_CONCURRENCY=1`) rather than read a `stale` row as
+     a low score.
+3. **Single model.** Only `gemma3:4b` was available, so this is not a comparison
    between models.
-3. **9 draft cases.** Enough to find the failure mode, not enough to claim a
+4. **9 draft cases.** Enough to find the failure mode, not enough to claim a
    rate with confidence. The percentages are reported because they came from real
    runs, and the sample size is stated so they are not over-read.
-4. **No live discovery run.** No SerpApi key was used. The client is tested
+5. **No live discovery run.** No SerpApi key was used. The client is tested
    against a mocked endpoint and against recorded fixtures.
 
 ## First-user log
