@@ -8,6 +8,57 @@ import { createEventEmitter, startScheduler } from '@localscout/core';
 import { pipelineDeps } from './runtime.js';
 
 /**
+ * Explain a startup failure in words.
+ *
+ * `startServer` rejects with the raw Node error, and at the top level that used
+ * to surface as an unhandled rejection: a stack trace about
+ * `Server.setupListenHandle`, which tells a developer nothing about what to do.
+ * A port already in use is the most common first-run failure after a bad
+ * `.env`, so it gets the same treatment as a configuration error.
+ *
+ * Returns the message rather than calling `process.exit`, so it can be asserted
+ * in a test without killing the test runner.
+ */
+export function describeStartupError(error: unknown, port: number): string {
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code: unknown }).code)
+      : '';
+
+  if (code === 'EADDRINUSE') {
+    return [
+      '',
+      `Port ${port} is already in use, so the API cannot start.`,
+      '',
+      'Another Localscout process is probably still running. Find it and stop it:',
+      '',
+      `  lsof -ti tcp:${port} | xargs kill`,
+      '',
+      'Or start on a different port:',
+      '',
+      `  API_PORT=${port + 1} pnpm dev`,
+      '',
+    ].join('\n');
+  }
+
+  if (code === 'EACCES') {
+    return [
+      '',
+      `Not allowed to bind port ${port}.`,
+      '',
+      'On Linux, ports below 1024 need elevated privileges. Localscout defaults to',
+      `8787, so this usually means something overrode it. Try: API_PORT=8788 pnpm dev`,
+      '',
+    ].join('\n');
+  }
+
+  // Anything else still gets a plain line rather than a stack trace, and the
+  // stack goes to the logger where it belongs.
+  const message = error instanceof Error ? error.message : String(error);
+  return `\nThe API could not start: ${message}\n`;
+}
+
+/**
  * `pnpm dev:api`
  *
  * Boots the local API on 127.0.0.1:8787.
@@ -60,4 +111,17 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => void shutdown());
 }
 
-await main();
+/*
+ * A startup failure exits with a message, not a stack trace.
+ *
+ * `boot` handles a bad `.env` this way already; a port clash is the next most
+ * common way for `pnpm dev` to fail on a fresh machine, so it gets the same
+ * treatment. Anything unforeseen is still logged in full for debugging.
+ */
+try {
+  await main();
+} catch (error) {
+  const port = Number(process.env['API_PORT'] ?? 8787);
+  process.stderr.write(describeStartupError(error, port));
+  process.exitCode = 1;
+}
