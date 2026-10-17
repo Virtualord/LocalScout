@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig } from '@localscout/core';
-import { describeStartupError } from './main.js';
+import { describeConfigError, describeStartupError } from './startup-error.js';
 
 /**
  * The startup failure message.
@@ -60,7 +60,7 @@ describe('describeStartupError', () => {
      * `boot` used to print this and call `process.exit` itself, which made the
      * message impossible to assert and took the decision away from every caller
      * — the API, the CLI and the tests. It throws now, and this is the rendering
-     * the API gives it.
+     * both entrypoints give it.
      *
      * The error is built by the real loader rather than by hand, so the test
      * fails if `loadConfig` ever stops producing a printable message.
@@ -86,6 +86,21 @@ describe('describeStartupError', () => {
       const message = describeStartupError(fromBadEnv(), 8787);
       expect(message).not.toMatch(/already in use/i);
       expect(message).not.toMatch(/lsof/);
+    });
+
+    it('is recognisable on its own, so the CLI can print it and stop', () => {
+      const message = describeConfigError(fromBadEnv());
+      expect(message).toBeDefined();
+      expect(message).toContain('LLM_PROVIDER');
+      expect(message).not.toMatch(/at .*\(.*:\d+:\d+\)/);
+    });
+
+    it('is refused for anything that is not a configuration error', () => {
+      // The CLI rethrows what it cannot explain, rather than printing a
+      // configuration sentence over a bug.
+      expect(describeConfigError(new Error('a programming mistake'))).toBeUndefined();
+      expect(describeConfigError('a bare string')).toBeUndefined();
+      expect(describeConfigError(null)).toBeUndefined();
     });
   });
 

@@ -33,8 +33,10 @@ now works.
 - The single-lead response no longer carries a `counts` block that no screen
   read.
 - `boot()` throws a `ConfigError` instead of printing it and calling
-  `process.exit`, so the CLI, the API and the tests each decide what to do with a
-  bad configuration.
+  `process.exit`, so each caller decides. The API renders it against the port it
+  tried to bind, the CLI prints the same sentence and exits 1 rather than
+  surfacing raw zod internals as a stack trace, and a test asserts the wording
+  without a process dying.
 
 ### Fixed
 
@@ -81,7 +83,7 @@ now works.
 
 ### Quality
 
-- 880 fast tests and 5 slow ones. New coverage where it was thinnest: the search
+- 882 fast tests and 5 slow ones. New coverage where it was thinnest: the search
   flow on the home screen, the leads screen in both views, the runs screen's stop
   control, the lead modal's language switcher, and the map (repaints, the pinned
   projection box, and the spotlight's entry, easing and fade-out).

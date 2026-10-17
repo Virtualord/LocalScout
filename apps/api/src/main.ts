@@ -4,65 +4,9 @@ import { createApp, startServer } from './app.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerLeadRoutes } from './routes/leads.js';
 import { registerRunRoutes } from './routes/runs.js';
-import { ConfigError, startScheduler } from '@localscout/core';
+import { startScheduler } from '@localscout/core';
 import { claimRun, reconcileInterruptedRuns } from './run-control.js';
-
-/**
- * Explain a startup failure in words.
- *
- * `startServer` rejects with the raw Node error, and at the top level that used
- * to surface as an unhandled rejection: a stack trace about
- * `Server.setupListenHandle`, which tells a developer nothing about what to do.
- * A port already in use is the most common first-run failure after a bad
- * `.env`, so it gets the same treatment as a configuration error.
- *
- * Returns the message rather than calling `process.exit`, so it can be asserted
- * in a test without killing the test runner.
- */
-export function describeStartupError(error: unknown, port: number): string {
-  if (error instanceof ConfigError) {
-    // A configuration error is the most common first-run failure of all, so it
-    // is printed as a sentence about what to fix, never as a stack trace.
-    return `\n${error.message}\n\n`;
-  }
-
-  const code =
-    typeof error === 'object' && error !== null && 'code' in error
-      ? String((error as { code: unknown }).code)
-      : '';
-
-  if (code === 'EADDRINUSE') {
-    return [
-      '',
-      `Port ${port} is already in use, so the API cannot start.`,
-      '',
-      'Another Localscout process is probably still running. Find it and stop it:',
-      '',
-      `  lsof -ti tcp:${port} | xargs kill`,
-      '',
-      'Or start on a different port:',
-      '',
-      `  API_PORT=${port + 1} pnpm dev`,
-      '',
-    ].join('\n');
-  }
-
-  if (code === 'EACCES') {
-    return [
-      '',
-      `Not allowed to bind port ${port}.`,
-      '',
-      'On Linux, ports below 1024 need elevated privileges. Localscout defaults to',
-      `8787, so this usually means something overrode it. Try: API_PORT=8788 pnpm dev`,
-      '',
-    ].join('\n');
-  }
-
-  // Anything else still gets a plain line rather than a stack trace, and the
-  // stack goes to the logger where it belongs.
-  const message = error instanceof Error ? error.message : String(error);
-  return `\nThe API could not start: ${message}\n`;
-}
+import { describeStartupError } from './startup-error.js';
 
 /**
  * `pnpm dev:api`
@@ -144,11 +88,13 @@ async function main(): Promise<void> {
  * `pnpm dev` to fail on a fresh machine and gets the same treatment. Anything
  * unforeseen is still logged in full for debugging.
  *
- * Only when this file is the program, not when it is imported. `main.test.ts`
- * imports `describeStartupError` from here, and without this guard that import
- * boots an entire API: it binds the port, reaps interrupted runs in whatever
- * database the environment points at, and starts the scheduler. A unit test
- * asserting a startup message must not start the server the message is about.
+ * Only when this file is the program, not when it is imported. An import must
+ * never boot a server: it would bind the port, reap interrupted runs in whatever
+ * database the environment points at, and start the scheduler. That is not
+ * hypothetical — the startup message helper used to live in this file, and the
+ * test that imported it booted a whole API as a side effect. The helper has
+ * moved to `startup-error.ts`, and this guard stays so the next import cannot
+ * repeat it: an entrypoint is a program, not a library.
  */
 const isEntrypoint =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;

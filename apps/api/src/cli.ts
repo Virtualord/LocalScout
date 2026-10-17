@@ -1,6 +1,7 @@
 import { createEventEmitter, type RunEvent } from '@localscout/core';
 import { findAndAuditLeads, setWorkflowDeps } from './mastra/workflows/find-and-audit-leads.js';
-import { boot, pipelineDeps } from './runtime.js';
+import { boot, pipelineDeps, type AppRuntime } from './runtime.js';
+import { describeConfigError } from './startup-error.js';
 import { CliUsageError, parseCliArgs } from './cli-args.js';
 
 /**
@@ -19,6 +20,25 @@ const VERBOSE_EVENTS = new Set([
   'draft.finished',
 ]);
 
+/**
+ * Boot, or say what is wrong with the configuration and stop.
+ *
+ * The CLI never binds a port, so a bad `.env` is the only startup failure it can
+ * explain — and `boot` throws it rather than printing it. Without this the throw
+ * reached the user as a stack trace about zod internals, which is the least
+ * useful possible answer to "I typed the key wrong".
+ */
+function bootOrExit(): AppRuntime {
+  try {
+    return boot(process.env, { prettyLogs: false });
+  } catch (error) {
+    const message = describeConfigError(error);
+    if (message === undefined) throw error;
+    process.stderr.write(message);
+    process.exit(1);
+  }
+}
+
 async function main(): Promise<void> {
   let args;
   try {
@@ -31,7 +51,7 @@ async function main(): Promise<void> {
     throw error;
   }
 
-  const runtime = boot(process.env, { prettyLogs: false });
+  const runtime = bootOrExit();
 
   // One active run at a time, matching the API's rule, so the CLI cannot start
   // a second run that would interleave database writes with the first.
