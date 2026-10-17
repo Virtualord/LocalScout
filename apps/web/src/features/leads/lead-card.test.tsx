@@ -86,9 +86,19 @@ describe('LeadCard', () => {
     expect(screen.getByText('82')).toBeInTheDocument();
   });
 
-  it('does not show a score of zero for an unaudited lead', () => {
+  it('says in words that no measurement exists, rather than showing a bare dash', () => {
     renderCard(<LeadCard lead={lead({ opportunityScore: null, auditStatus: null })} />);
-    expect(screen.getByText(/not audited/i)).toBeInTheDocument();
+    // A full-size em dash over "/100" reads as a rendering glitch. A lead with
+    // no measurement has to say so, in the score block and on the chip, without
+    // the two blocks saying the identical words.
+    expect(screen.getByText('Not measured')).toBeInTheDocument();
+    expect(screen.getByText('Not audited')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes an unreachable site from an unaudited one on the card', () => {
+    renderCard(<LeadCard lead={lead({ opportunityScore: null, auditStatus: 'unavailable' })} />);
+    expect(screen.getByText('Not checked')).toBeInTheDocument();
   });
 
   it('shows a WhatsApp chip only when the number is a mobile', () => {

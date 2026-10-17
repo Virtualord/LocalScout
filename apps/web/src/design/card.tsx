@@ -98,17 +98,37 @@ export const DashedCtaLink = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<
  * Mirrors the reference's "date block": a tiny mono label, a very large number,
  * and the denominator underneath. The number is the point, so it gets the
  * display face at the largest size in the card.
+ *
+ * An absent score says so in words. A full-size em dash over "/100" reads as a
+ * rendering glitch rather than as a measurement that was never taken, which is
+ * the opposite of what this project is for.
  */
 export function ScoreBlock({ score }: { score: number | null | undefined }) {
+  const missing = score === null || score === undefined;
+
   return (
     <div className="border-l border-ink pl-5 text-center">
       <div className="mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink/70">
         Score
       </div>
-      <div className="display my-1 text-5xl leading-none text-ink">
-        {score === null || score === undefined ? '—' : score}
-      </div>
-      <div className="mono text-[10px] uppercase tracking-wider text-ink/60">/100</div>
+      {missing ? (
+        <div className="my-2 flex h-12 items-center justify-center">
+          {/*
+            "Not measured", not "Not audited": the tier chip already states the
+            lead's state, and two blocks reading identically look like a bug.
+            This one answers the narrower question, which is whether a number
+            exists.
+          */}
+          <span className="mono max-w-[7ch] text-[10px] uppercase leading-tight tracking-wider text-ink/45">
+            Not measured
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="display my-1 text-5xl leading-none text-ink">{score}</div>
+          <div className="mono text-[10px] uppercase tracking-wider text-ink/60">/100</div>
+        </>
+      )}
     </div>
   );
 }
