@@ -47,6 +47,21 @@ export interface PixelMapProps {
   seed?: number;
 }
 
+/**
+ * Height that keeps the cells square.
+ *
+ * Deriving the height from the grid rather than a width ratio means the cells
+ * are the same size horizontally and vertically at every container width. A
+ * ratio produces square cells at exactly one width and stretched cells
+ * everywhere else, which on a pixel map is immediately visible.
+ *
+ * The map is `width: 100%` and fills whatever box it is given, so a full-bleed
+ * layout is a matter of the parent section, not of a prop here.
+ */
+function heightFor(width: number, grid: { cols: number; rows: number }): number {
+  return Math.round((width / grid.cols) * grid.rows);
+}
+
 export function PixelMap({
   leads,
   onSelect,
@@ -94,14 +109,14 @@ export function PixelMap({
 
     const measure = () => {
       const width = element.clientWidth;
-      if (width > 0) setSize({ width, height: Math.round(width * 0.5) });
+      if (width > 0) setSize({ width, height: heightFor(width, grid) });
     };
 
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [grid]);
 
   const { state: spotlight, start, stop } = useSpotlight();
 
