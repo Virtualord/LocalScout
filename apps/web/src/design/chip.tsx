@@ -27,19 +27,14 @@ export interface ChipProps {
   className?: string;
 }
 
-/*
- * The bordered variants carry `border-ink`; the rest inherit the transparent
- * border below and paint their background under it, so a chip looks the same with
- * or without a border — and every chip is the same height.
- */
 const CLASSES: Record<ChipVariant, string> = {
   hot: 'bg-pink text-ink',
   neutral: 'bg-sage text-ink',
-  finding: 'bg-paper text-ink border-ink',
+  finding: 'bg-paper text-ink border border-ink',
   'status-sent': 'bg-ink text-paper',
   'status-replied': 'bg-amber text-ink',
   'status-won': 'bg-coral text-ink',
-  'status-lost': 'bg-paper-band-2 text-ink border-ink',
+  'status-lost': 'bg-paper-band-2 text-ink border border-ink',
   'severity-high': 'bg-coral text-ink',
   'severity-medium': 'bg-amber text-ink',
   'severity-low': 'bg-sage text-ink',
@@ -49,13 +44,7 @@ export function Chip({ variant = 'neutral', children, className = '' }: ChipProp
   return (
     <span
       className={[
-        /*
-         * The transparent border is load-bearing, not decoration. A chip whose
-         * variant adds a visible border used to be 2px taller than one that did
-         * not, so a row of chips was 23px on one lead's card and 25px on the
-         * next, and the rows of cards below them did not line up.
-         */
-        'mono inline-flex items-center gap-1 border border-transparent px-2 py-[3px] text-[11px] font-bold uppercase tracking-wider',
+        'mono inline-flex items-center gap-1 px-2 py-[3px] text-[11px] font-bold uppercase tracking-wider',
         CLASSES[variant],
         className,
       ]

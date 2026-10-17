@@ -121,16 +121,6 @@ now works.
   past the lead. The panel is a column with a scrolling body and fixed header and
   footer now, and the footer is two even columns on a phone instead of wrapping
   2‑1‑1.
-- **The lead cards were all different sizes.** Cards in one grid are read as a set,
-  so a card with less to say looking smaller reads as a lead that matters less —
-  which is the opposite of what a shorter card means. Four things caused it and all
-  four are fixed: a chip was 2px taller when its variant happened to carry a
-  border, the category-and-address line was free to wrap to two lines, the
-  finding line was present on some cards and absent on others, and the "run
-  another search" card was 60px shorter than the rest. Measured in a twelve-lead
-  grid before the fix: rows of 166px, 148px and 164px in one list. Every card is
-  152px now at both viewports, with the title, address and finding landing on
-  common baselines.
 - The `ssrf.ts` header claimed the resolved address was pinned for the request.
   It is checked, not pinned; the comments now say so and ADR-0002 records the
   residual.
@@ -152,18 +142,15 @@ now works.
 
 ### Quality
 
-- 892 fast tests and 5 slow ones, and 56 end-to-end. New coverage where it was
+- 892 fast tests and 5 slow ones, and 50 end-to-end. New coverage where it was
   thinnest: the search flow on the home screen, the leads screen in both views,
   the runs screen's stop control, the lead modal's language switcher, the map
   (repaints, the pinned projection box, and the spotlight's entry, easing and
   fade-out), the design primitives' focus ring, the modal's entry animation and
-  footer legibility, and the leads grid's uniformity — all asserted as computed
-  styles and bounding boxes, because each of those bugs lived in the cascade, in a
-  resolved colour, or in the difference between two rows of a grid, where jsdom
-  has nothing to say. The grid test seeds twelve leads and gives them three
-  different statuses, because with one repeated chip the assertion cannot fail and
-  would prove nothing. And `.env` loading, including that a shell variable still
-  wins over the file.
+  footer legibility — all asserted as computed styles and bounding boxes, because
+  each of those bugs lived in the cascade or in a resolved colour, where jsdom has
+  nothing to say — and `.env` loading, including that a shell variable still wins
+  over the file.
 
 ## [0.1.0] - 2026-10-13
 
