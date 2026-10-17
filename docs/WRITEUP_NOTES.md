@@ -107,11 +107,13 @@ cd apps/api && DATA_DIR=/tmp/opencode/chrome-audit pnpm exec tsx src/cli.ts "int
 | Draft                                      | one, from the template                                      |
 
 Two things to read from that table. The measurements are real: the LCP is the
-site's, not a default, and the OPPORTUNITY score is derived from the findings
-rather than copied from Lighthouse's performance score. And the finding is
-honest about the boundary: 8069 ms against a 4000 ms threshold is a
-high-severity finding with the measurement attached, which is the shape every
-finding in this tool has.
+site's, not a default, and the opportunity score is arithmetic over recorded
+evidence rather than a copy of Lighthouse's performance score — 30 and 8 from the
+two findings, plus 3 from the listing's own rating (4.2) and review count (87),
+which is the 41 in the row. Nothing in that sum was guessed. And the finding is
+honest about its boundary: 8069 ms against a 4000 ms threshold is a high-severity
+finding with the measurement attached, which is the shape every finding in this
+tool has.
 
 `pnpm test:slow` runs the same integration against local fixture sites, so the
 metric extraction, the score ordering and the missing-Chrome path are all
