@@ -247,10 +247,18 @@ describe('layoutLeads', () => {
   });
 
   it('uses the documented default grids', () => {
-    expect(DESKTOP_GRID.cols).toBe(64);
+    expect(DESKTOP_GRID.cols).toBe(96);
     expect(DESKTOP_GRID.rows).toBe(28);
-    expect(MOBILE_GRID.cols).toBe(32);
-    expect(MOBILE_GRID.rows).toBe(20);
+    expect(MOBILE_GRID.cols).toBe(40);
+    expect(MOBILE_GRID.rows).toBe(24);
+  });
+
+  it('is much wider than it is tall, so the map reads as geography', () => {
+    // A squarer grid reads as a heatmap rather than a map. Both sizes are
+    // deliberately landscape, and the renderer derives its height from these
+    // numbers so the cells stay square.
+    expect(DESKTOP_GRID.cols / DESKTOP_GRID.rows).toBeGreaterThan(2.5);
+    expect(MOBILE_GRID.cols / MOBILE_GRID.rows).toBeGreaterThan(1.4);
   });
 });
 

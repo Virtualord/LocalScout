@@ -54,9 +54,18 @@ export interface LayoutResult {
   leads: PlacedLead[];
 }
 
-/** Desktop and mobile cell counts. 64x28 is the reference's density. */
-export const DESKTOP_GRID = { cols: 64, rows: 28 } as const;
-export const MOBILE_GRID = { cols: 32, rows: 20 } as const;
+/**
+ * Cell counts, chosen so the map reads as a place rather than a chart.
+ *
+ * Wide and shallow is the point: at 96x28 a full-bleed map is a landscape with
+ * a long coastline, which is what makes it look like geography. A squarer grid
+ * reads as a heatmap.
+ *
+ * The renderer derives its height from these, so the cells stay square at any
+ * container width instead of stretching when the box is wider than expected.
+ */
+export const DESKTOP_GRID = { cols: 96, rows: 28 } as const;
+export const MOBILE_GRID = { cols: 40, rows: 24 } as const;
 
 /** How much of each edge is kept clear, so leads never sit on the border. */
 const PADDING = 0.12;
@@ -76,8 +85,15 @@ export function hash(x: number, y: number, seed: number): number {
 /**
  * The land mask.
  *
- * An ellipse whose radius varies per angle, so the coast has bays and
- * peninsulas. Cells outside it are water.
+ * An ellipse whose radius varies by direction, built from two octaves of
+ * angular noise. The coarse octave sets the overall silhouette, so the shape
+ * has bays and a peninsula or two rather than being radially symmetric; the fine
+ * octave roughens the coast. A single octave produces a lumpy potato, which is
+ * the thing this function is trying not to be.
+ *
+ * Per-cell jitter then breaks the remaining regularity. Every term is a pure
+ * function of (angle, column, row, seed), so the mask is identical across
+ * renders and can be asserted on exactly in tests.
  */
 export function buildLandMask(cols: number, rows: number, seed: number): boolean[] {
   const land: boolean[] = new Array(cols * rows).fill(false);
@@ -93,11 +109,18 @@ export function buildLandMask(cols: number, rows: number, seed: number): boolean
       const dy = (row - centreY) / baseRadiusY;
       const distance = Math.hypot(dx, dy);
 
-      // Angular noise: a smooth-ish perturbation of the radius per direction,
-      // plus a per-cell jitter so the edge is not a clean curve.
       const angle = Math.atan2(dy, dx);
-      const radiusNoise = 0.78 + hash(Math.round(angle * 12), seed, 7) * 0.22;
-      const edgeNoise = (hash(col, row, seed) - 0.5) * 0.06;
+
+      // Coarse: a handful of directions, large amplitude. This is what stops the
+      // coast being a circle.
+      const coarse = hash(Math.round(angle * 2.5), seed, 3) * 0.3;
+      // Fine: many directions, small amplitude. This roughens it.
+      const fine = hash(Math.round(angle * 11), seed, 7) * 0.12;
+
+      const radiusNoise = 0.66 + coarse + fine;
+      // Breaks up the boundary itself, so the edge is pixelated rather than
+      // smoothly interpolated.
+      const edgeNoise = (hash(col, row, seed) - 0.5) * 0.05;
 
       land[row * cols + col] = distance <= radiusNoise + edgeNoise;
     }
