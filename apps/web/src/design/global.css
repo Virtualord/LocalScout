@@ -209,6 +209,38 @@
 }
 
 /*
+ * Fields.
+ *
+ * A bordered field owns its focus ring, not the `<input>` inside it. Padding puts
+ * the input's box inside the field's border, so an outline on the input is drawn
+ * in the middle of the field — a second box just inside the first, with the
+ * placeholder text crossing it, which reads as a misaligned border rather than
+ * as focus. `:focus-within` draws the ring on the field's own edge instead, and
+ * the input below gives up its own.
+ *
+ * Two rings, not one. A ring sits *outside* the field, so it has to contrast
+ * with whatever is behind the field, and this app has both paper pages and dark
+ * teal bands: paper alone is invisible on paper, ink alone is invisible on teal.
+ * The ink ring fills the 2px offset and the paper ring sits beyond it, so the
+ * focus state reads on either surface.
+ */
+.field:focus-within {
+  outline: 3px solid var(--color-paper);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-ink);
+}
+
+/*
+ * Stated here rather than as an `outline-none` utility on the input, because
+ * Tailwind's utilities are layered and this file is not: layered rules lose to
+ * unlayered ones whatever their specificity, so the utility would be ignored and
+ * both rings would be drawn.
+ */
+.field input:focus-visible {
+  outline: none;
+}
+
+/*
  * Route loader: four squares bobbing about a quarter of their size, staggered
  * left to right. Keyed off --dur-slow so the timing lives with the other motion
  * tokens.

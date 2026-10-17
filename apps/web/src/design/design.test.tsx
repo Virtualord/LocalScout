@@ -21,7 +21,8 @@ import {
 } from './primitives.js';
 import { Dialog, DialogContent, DialogTrigger } from './dialog.js';
 import { buildSkyline, buildStairs, MiniStrip, PixelSkyline, RouteLoader } from './decorations.js';
-import { Card } from './card.js';
+import { Card, ComparisonRow } from './card.js';
+import { Input, SearchField } from './input.js';
 import { Button } from './button.js';
 import { tierForScore } from './chip.js';
 
@@ -87,6 +88,81 @@ describe('Card', () => {
 
     rerender(<Card static>Card</Card>);
     expect(screen.getByText('Card').className).not.toContain('press-in');
+  });
+});
+
+describe('ComparisonRow', () => {
+  /** The row's `dl`, which carries no implicit ARIA role to query by. */
+  function row(): HTMLElement {
+    const list = document.querySelector('dl');
+    if (list === null) throw new Error('no dl rendered');
+    return list;
+  }
+
+  it('is a description list, so the label and value are announced as a pair', () => {
+    render(<ComparisonRow label="Discovery" value="Fixtures" />);
+
+    // A dl/dt/dd gives a screen reader a pause between the two, and puts a line
+    // break between them in copied text. Two spans in a div gave neither, so the
+    // two read and copy as `DiscoveryFixtures`.
+    expect(row().tagName).toBe('DL');
+    expect(screen.getByText('Discovery').tagName).toBe('DT');
+    expect(screen.getByText('Fixtures').tagName).toBe('DD');
+  });
+
+  it('insets its own text, because the rule runs to the card edge', () => {
+    render(<ComparisonRow label="Discovery" value="Fixtures" />);
+
+    // These rows live in cards with no padding of their own, so without an inset
+    // the text sits with its face against the border.
+    expect(row().className).toMatch(/\bpx-4\b/);
+    expect(row().className).toMatch(/\bpx-5\b/);
+  });
+
+  it('stacks the label above the value until there is room for both', () => {
+    render(<ComparisonRow label="Discovery" value="Fixtures" />);
+
+    // One column by default (`grid`, no `grid-cols-*` until the `sm` breakpoint)
+    // and two above it. A value such as "Fixtures — the bundled listings, no key
+    // needed" is wider than a phone, and forced onto one line the label touches
+    // the value's first word.
+    const classes = row().className;
+    expect(classes).toMatch(/(^|\s)grid(\s|$)/);
+    expect(classes).not.toMatch(/(^|\s)grid-cols-/);
+    expect(classes).toMatch(/sm:grid-cols-\[auto_1fr\]/);
+  });
+});
+
+describe('fields and focus', () => {
+  it('puts the focus ring on the field, not on the input inside it', async () => {
+    const { container } = render(<Input label="Business name" />);
+
+    // The ring is drawn by `.field:focus-within` in global.css, so the input's
+    // own ring has to be gone. An outline on the input is drawn inside the field's
+    // padding — a second box just inside the first, which reads as a misaligned
+    // border rather than as focus.
+    const field = container.querySelector('.field');
+    expect(field).not.toBeNull();
+
+    const input = screen.getByLabelText('Business name');
+    await userEvent.click(input);
+    expect(input).toHaveFocus();
+    // Not a Tailwind `outline-none`: those are layered and lose to the unlayered
+    // rule, so the opt-out has to live in the stylesheet to mean anything.
+    expect(input.className).not.toContain('outline');
+  });
+
+  it('rings the whole joined search control, including the button', () => {
+    const { container } = render(
+      <SearchField value="" onChange={() => undefined} onSubmit={() => undefined} />,
+    );
+
+    // On the input half alone, the ring's right edge would cut across the button
+    // the field is joined to.
+    const field = container.querySelector('.field');
+    expect(field).not.toBeNull();
+    expect(field?.querySelector('button')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Find leads' })).toBeInTheDocument();
   });
 });
 

@@ -109,6 +109,43 @@ test('the lead modal traps focus and returns it on Escape', async ({ page }, tes
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
+test('the search field draws its focus ring on the field, not the input', async ({
+  page,
+}, testInfo) => {
+  await openApp(page, '/');
+
+  const input = page.locator('#search-input');
+  await input.focus();
+
+  const ring = await page.evaluate(() => {
+    const el = document.querySelector('#search-input');
+    const field = el?.closest('.field');
+    const read = (node: Element | null | undefined) => {
+      if (node === null || node === undefined) return null;
+      const style = getComputedStyle(node);
+      return {
+        outline: style.outlineStyle,
+        width: style.outlineWidth,
+        shadow: style.boxShadow,
+        box: node.getBoundingClientRect().toJSON(),
+      };
+    };
+    return { input: read(el), field: read(field) };
+  });
+
+  // The ring belongs to the field. On the input it is drawn inside the field's
+  // padding — a second box just inside the first, with the placeholder text
+  // crossing it — which reads as a misaligned border rather than as focus.
+  expect(ring.input?.outline).toBe('none');
+  expect(ring.field?.outline).not.toBe('none');
+  expect(ring.field?.width).toBe('3px');
+
+  // And the ring sits outside the field rather than inside it.
+  expect(ring.field?.box.top).toBeLessThan(ring.input?.box.top ?? 0);
+
+  await attachScreenshot(page, testInfo);
+});
+
 test('the tabs move with the arrow keys', async ({ page }) => {
   await openApp(page, '/styleguide');
 

@@ -82,13 +82,30 @@ now works.
 - The `ssrf.ts` header claimed the resolved address was pinned for the request.
   It is checked, not pinned; the comments now say so and ADR-0002 records the
   residual.
+- **Clicking the search field drew a second box inside it.** The focus ring was
+  an outline on the `<input>`, which sits inside the field's padding, so the ring
+  appeared as a rectangle floating in the middle of the field with the
+  placeholder text crossing it — a misaligned border rather than focus. The ring
+  is drawn on the field itself now. The `outline-none` utility that was supposed
+  to suppress the inner ring could not: Tailwind's utilities are in a cascade
+  layer and unlayered CSS beats them whatever the specificity, so the opt-out is
+  stated in the stylesheet, and the rule that claims to do it says why.
+- **The settings rows ran their label into their value.** On a phone the two were
+  forced onto one line and `DISCOVERY` sat against the start of the value,
+  touching it. Comparison rows are a description list now — a screen-reader pause
+  and a line break in copied text, where two spans in a div gave neither and the
+  pair read and copied as `DiscoveryFixtures` — stacked below the `sm`
+  breakpoint, and inset from the card edge, which they were previously sitting
+  flush against.
 
 ### Quality
 
-- 882 fast tests and 5 slow ones. New coverage where it was thinnest: the search
+- 887 fast tests and 5 slow ones. New coverage where it was thinnest: the search
   flow on the home screen, the leads screen in both views, the runs screen's stop
-  control, the lead modal's language switcher, and the map (repaints, the pinned
-  projection box, and the spotlight's entry, easing and fade-out).
+  control, the lead modal's language switcher, the map (repaints, the pinned
+  projection box, and the spotlight's entry, easing and fade-out), and the design
+  primitives' focus ring — asserted in the browser as a computed style, since
+  jsdom has no cascade to test.
 
 ## [0.1.0] - 2026-10-13
 

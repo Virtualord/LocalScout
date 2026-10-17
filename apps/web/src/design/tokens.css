@@ -112,16 +112,16 @@
  * Focus is always visible and always 3px, because every interactive element in
  * this app is reachable by keyboard and a keyboard user must always know where
  * they are.
+ *
+ * Unlayered, which is worth knowing: Tailwind's utilities live in
+ * `@layer utilities`, and unlayered CSS beats every layered rule whatever its
+ * specificity. So this ring cannot be switched off with an `outline-none`
+ * utility, and a component that wants a different one has to say so in this
+ * stylesheet. `.field` in global.css is the one place that does.
  */
 :focus-visible {
   outline: 3px solid var(--color-paper);
   outline-offset: 2px;
-}
-
-/* On paper surfaces the ring is ink, because paper-on-paper is invisible. */
-.on-paper :focus-visible,
-.focus-ink:focus-visible {
-  outline-color: var(--color-ink);
 }
 
 /* Respect the system setting: no easing, no bobbing, no count-up. */

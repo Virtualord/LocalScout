@@ -136,14 +136,28 @@ export function ScoreBlock({ score }: { score: number | null | undefined }) {
 /**
  * A label/value row for comparison cards.
  *
- * Mono on both sides, the value bold, separated by a 20% ink rule.
+ * A description list, because a label and its value are a pair: markup that
+ * says so gives a screen reader a pause between them, and it puts a line break
+ * in copied text instead of the two running together as `DiscoveryFixtures`.
+ *
+ * Mono on both sides, the value bold, separated by a 20% ink rule. The rule runs
+ * the full width of the card, so the text brings its own inset — the cards these
+ * rows live in have no padding of their own, and text with no inset sits with its
+ * face against the border.
+ *
+ * Side by side once there is room for both, and stacked below that. A value such
+ * as "Fixtures — the bundled listings, no key needed" is wider than a phone, and
+ * when the two are forced onto one line the label ends up touching the value's
+ * first word.
  */
 export function ComparisonRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-ink/20 py-2.5 last:border-b-0">
-      <span className="mono text-[11px] uppercase tracking-wider text-ink/70">{label}</span>
-      <span className="mono text-[13px] font-bold text-ink">{value}</span>
-    </div>
+    <dl className="grid gap-x-4 border-b border-ink/20 px-4 py-2.5 last:border-b-0 sm:grid-cols-[auto_1fr] sm:items-baseline sm:px-5">
+      <dt className="mono min-w-0 text-[11px] uppercase tracking-wider text-ink/70">{label}</dt>
+      <dd className="mono min-w-0 break-words text-[13px] font-bold text-ink sm:text-right">
+        {value}
+      </dd>
+    </dl>
   );
 }
 
@@ -157,8 +171,8 @@ export function ComparisonCard({
   rows: { label: string; value: ReactNode }[];
 }) {
   return (
-    <Card className="p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <Card className="p-0">
+      <div className="flex items-center justify-between gap-3 border-b border-ink/20 px-5 py-4">
         <h3 className="display-card text-ink">{title}</h3>
         {chip}
       </div>

@@ -41,7 +41,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
       <div
         className={[
-          'flex items-center gap-2 border bg-white px-3',
+          // `field` so the focus ring is drawn on this border, not on the input
+          // inside it. See `.field` in global.css.
+          'field flex items-center gap-2 border bg-white px-3',
           // The error border is the only place a non-ink border appears.
           error ? 'border-red' : 'border-ink',
         ].join(' ')}
@@ -52,7 +54,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           id={inputId}
           aria-invalid={error !== undefined}
           aria-describedby={error && inputId ? `${inputId}-error` : undefined}
-          className="w-full bg-transparent py-2.5 text-[15px] text-ink outline-none placeholder:text-ink/45"
+          className="w-full bg-transparent py-2.5 text-[15px] text-ink placeholder:text-ink/45"
           {...rest}
         />
       </div>
@@ -106,7 +108,12 @@ export function SearchField({
       </label>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-        <div className="flex flex-1 items-stretch">
+        {/*
+         * `field` on the row rather than on the input half: the ring belongs to
+         * the whole joined control, and a ring drawn on the input half's right
+         * edge would cut across the button it is joined to.
+         */}
+        <div className="field flex flex-1 items-stretch">
           <div
             className={[
               'flex flex-1 items-center gap-2 border border-r-0 bg-white px-4',
@@ -121,7 +128,7 @@ export function SearchField({
               placeholder={placeholder}
               aria-invalid={error !== undefined}
               aria-describedby={error ? `${inputId}-error` : undefined}
-              className="w-full bg-transparent py-4 text-[15px] text-ink outline-none placeholder:text-ink/45"
+              className="w-full bg-transparent py-4 text-[15px] text-ink placeholder:text-ink/45"
             />
           </div>
 
