@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, desc, eq, gte, inArray, like, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, like, lte, or, sql, type SQL } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import {
   audits as auditsRef,
@@ -74,6 +74,27 @@ export interface LeadWithScore extends Lead {
   rowid: number;
 }
 
+/**
+ * The score of a lead's newest audit, as a correlated scalar subquery.
+ *
+ * Correlated rather than a window function over the whole `audits` table: the
+ * `(lead_id, created_at)` index answers this by seeking straight to a lead's
+ * newest audit, where ranking every audit in the database to find the first row
+ * per lead sorts a table that only ever grows.
+ *
+ * Null covers two cases a caller does not need to tell apart: no audit at all,
+ * and a newest audit recorded as `unavailable`. Neither is a measurement, and
+ * surfacing one as a number is what would let a site that could not be reached
+ * rank as the coldest lead in the list.
+ */
+const newestScore = sql<number | null>`(
+  select case when a.status = 'unavailable' then null else a.opportunity_score end
+  from audits a
+  where a.lead_id = ${leads.id}
+  order by a.created_at desc, a.rowid desc
+  limit 1
+)`;
+
 export class LeadRepository {
   constructor(private readonly handle: Db) {}
 
@@ -81,8 +102,19 @@ export class LeadRepository {
     return this.handle.db;
   }
 
-  /** The latest audit per lead, keyed by lead id. */
-  private latestAuditScores(): Map<string, { score: number; status: string; id: string }> {
+  /**
+   * The latest audit per lead, keyed by lead id.
+   *
+   * Scoped to the leads being returned. Unscoped, this read the entire `audits`
+   * table on every request, so opening one lead's modal loaded every audit ever
+   * recorded in order to look up one row.
+   */
+  private latestAuditScores(
+    ids: string[],
+  ): Map<string, { score: number; status: string; id: string }> {
+    const latest = new Map<string, { score: number; status: string; id: string }>();
+    if (ids.length === 0) return latest;
+
     const rows = this.db
       .select({
         leadId: auditsRef.leadId,
@@ -92,10 +124,10 @@ export class LeadRepository {
         createdAt: auditsRef.createdAt,
       })
       .from(auditsRef)
+      .where(inArray(auditsRef.leadId, ids))
       .orderBy(asc(auditsRef.leadId), desc(auditsRef.createdAt), desc(sql`${auditsRef}.rowid`))
       .all();
 
-    const latest = new Map<string, { score: number; status: string; id: string }>();
     for (const row of rows) {
       // Ordering by (leadId asc, createdAt desc) means the first row seen for a
       // lead is its newest audit; later rows are older history.
@@ -106,10 +138,14 @@ export class LeadRepository {
     return latest;
   }
 
-  private draftCounts(): Map<string, number> {
+  /** Draft counts for the leads being returned, in one grouped read. */
+  private draftCounts(ids: string[]): Map<string, number> {
+    if (ids.length === 0) return new Map();
+
     const rows = this.db
       .select({ leadId: draftsRef.leadId, count: sql<number>`count(*)` })
       .from(draftsRef)
+      .where(inArray(draftsRef.leadId, ids))
       .groupBy(draftsRef.leadId)
       .all();
     return new Map(rows.map((row) => [row.leadId, row.count]));
@@ -223,12 +259,20 @@ export class LeadRepository {
     return new Set(rows.map((row) => row.domainKey).filter((key): key is string => key !== null));
   }
 
-  async list(filters: LeadFilters = {}): Promise<LeadWithScore[]> {
-    const conditions = [];
+  /**
+   * The `where` clauses shared by `list` and `count`.
+   *
+   * One builder for both, because a total computed from different conditions
+   * than the page it counts is worse than no total at all: it is a number that
+   * looks like an answer.
+   */
+  private filtersToConditions(filters: LeadFilters): SQL[] {
+    const conditions: SQL[] = [];
 
     if (filters.status) {
       conditions.push(eq(leads.status, filters.status));
     }
+
     if (filters.q && filters.q.trim() !== '') {
       const needle = `%${filters.q.trim()}%`;
       const match = or(
@@ -239,27 +283,78 @@ export class LeadRepository {
       if (match) conditions.push(match);
     }
 
+    if (filters.minScore !== undefined) {
+      // Comparing with NULL yields NULL, never true, so this also drops leads
+      // with no measured score. That is the intended rule: a minimum score is a
+      // statement about measurements, and a failed audit is not one.
+      conditions.push(sql`${newestScore} >= ${filters.minScore}`);
+    }
+
+    return conditions;
+  }
+
+  /** The ordering for a sort key, always ending in the id tie-break. */
+  private orderFor(sort: NonNullable<LeadFilters['sort']>): SQL[] {
+    switch (sort) {
+      case 'newest':
+        // A run writes a dozen leads in the same millisecond, so insertion
+        // order breaks the tie; without it the list reshuffles on reload.
+        return [desc(leads.createdAt), desc(sql`${leads}.rowid`), asc(leads.id)];
+      case 'name':
+        /*
+         * `nocase` rather than the binary default, so a name is not split into
+         * two alphabets by its capital letters. This is not identical to the
+         * ICU collation the browser would apply for display, and it cannot be:
+         * the page is chosen in SQL, so the ordering has to be expressible in
+         * SQL. For plain ASCII names the two agree.
+         */
+        return [asc(sql`${leads.name} collate nocase`), asc(leads.id)];
+      case 'score':
+        // DESC sorts NULL last in SQLite, which is what an unmeasured lead
+        // deserves: it is not a zero and must not rank as one.
+        return [desc(newestScore), asc(leads.id)];
+    }
+  }
+
+  /**
+   * A page of leads, filtered, ordered and limited in SQL.
+   *
+   * Every one of those steps used to happen in JavaScript after loading the
+   * whole table, so `limit` bounded what was returned rather than what was
+   * read, and the reads grew with the database instead of with the page.
+   */
+  async list(filters: LeadFilters = {}): Promise<LeadWithScore[]> {
+    const conditions = this.filtersToConditions(filters);
+
     const rows = this.db
       .select()
       .from(leads)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(...this.orderFor(filters.sort ?? 'score'))
+      .limit(filters.limit ?? 50)
+      .offset(filters.offset ?? 0)
       .all();
 
-    let enriched = this.enrich(rows);
+    return this.enrich(rows);
+  }
 
-    // minScore filters on the latest audit, which is a join, so it applies here.
-    if (filters.minScore !== undefined) {
-      const min = filters.minScore;
-      enriched = enriched.filter(
-        (lead) => lead.opportunityScore !== null && lead.opportunityScore >= min,
-      );
-    }
+  /**
+   * How many leads match the filters, ignoring `limit` and `offset`.
+   *
+   * The list endpoint's `total` was every lead in the database regardless of
+   * the filters, so a filtered view of two leads still reported the whole table
+   * and the pagination was wrong by construction.
+   */
+  async count(filters: LeadFilters = {}): Promise<number> {
+    const conditions = this.filtersToConditions(filters);
 
-    enriched = sortLeads(enriched, filters.sort ?? 'score');
+    const row = this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(leads)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .get();
 
-    const offset = filters.offset ?? 0;
-    const limit = filters.limit ?? 50;
-    return enriched.slice(offset, offset + limit);
+    return row?.count ?? 0;
   }
 
   /**
@@ -268,11 +363,15 @@ export class LeadRepository {
    * The list endpoint and the single-lead endpoint must agree: a lead that
    * shows a score in the grid but a blank in its own modal is exactly the kind
    * of inconsistency that makes a person distrust the whole number.
+   *
+   * Scoped to the rows passed in, so a single-lead read touches a single lead's
+   * audits and drafts rather than all of them.
    */
   private enrich(rows: Lead[]): LeadWithScore[] {
-    const scores = this.latestAuditScores();
-    const draftCounts = this.draftCounts();
-    const rowids = this.rowIds();
+    const ids = rows.map((row) => row.id);
+    const scores = this.latestAuditScores(ids);
+    const draftCounts = this.draftCounts(ids);
+    const rowids = this.rowIds(ids);
 
     return rows.map((row) => {
       const audit = scores.get(row.id);
@@ -300,10 +399,13 @@ export class LeadRepository {
   }
 
   /** Insertion order, keyed by lead id. Used only to break sort ties. */
-  private rowIds(): Map<string, number> {
+  private rowIds(ids: string[]): Map<string, number> {
+    if (ids.length === 0) return new Map();
+
     const rows = this.db
       .select({ id: leads.id, rowid: sql<number>`rowid` })
       .from(leads)
+      .where(inArray(leads.id, ids))
       .all();
     return new Map(rows.map((row) => [row.id, row.rowid]));
   }
@@ -421,45 +523,6 @@ export class LeadRepository {
   async all(): Promise<Lead[]> {
     return this.db.select().from(leads).all();
   }
-
-  /** Highest-scoring leads, for the home "hot leads" band. */
-  async topByScore(limit: number): Promise<LeadWithScore[]> {
-    const all = await this.list({ sort: 'score' });
-    return all.slice(0, limit);
-  }
-}
-
-function sortLeads(rows: LeadWithScore[], sort: NonNullable<LeadFilters['sort']>): LeadWithScore[] {
-  const sorted = [...rows];
-
-  // One comparator, not a sequence of sorts: a second sort() call would
-  // discard the primary ordering.
-  sorted.sort((a, b) => {
-    switch (sort) {
-      case 'score': {
-        const delta = (b.opportunityScore ?? -1) - (a.opportunityScore ?? -1);
-        if (delta !== 0) return delta;
-        break;
-      }
-      case 'newest': {
-        const delta = b.createdAt.getTime() - a.createdAt.getTime();
-        if (delta !== 0) return delta;
-        // Same millisecond, which is the normal case for one run's worth of
-        // leads. Insertion order is what "newest" actually means here; falling
-        // through to the id tie-break would reshuffle the list on every reload.
-        return b.rowid - a.rowid;
-      }
-      case 'name': {
-        const delta = a.name.localeCompare(b.name);
-        if (delta !== 0) return delta;
-        break;
-      }
-    }
-    // The id tie-break keeps pagination stable when scores or names collide.
-    return a.id.localeCompare(b.id);
-  });
-
-  return sorted;
 }
 
 /** Drop undefined keys so drizzle writes NULL rather than the string "undefined". */

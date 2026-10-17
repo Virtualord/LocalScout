@@ -309,6 +309,203 @@ describe('repositories', () => {
       });
     });
 
+    describe('paging and counting in SQL', () => {
+      it('takes a page with limit and offset', async () => {
+        for (let i = 0; i < 5; i += 1) {
+          await seedLead({ name: `Bulk ${i}` });
+        }
+
+        // Same-millisecond inserts order by insertion order, newest first.
+        const first = await repos.leads.list({ sort: 'newest', limit: 2 });
+        const second = await repos.leads.list({ sort: 'newest', limit: 2, offset: 2 });
+        const past = await repos.leads.list({ sort: 'newest', limit: 2, offset: 5 });
+
+        expect(first.map((lead) => lead.name)).toEqual(['Bulk 4', 'Bulk 3']);
+        expect(second.map((lead) => lead.name)).toEqual(['Bulk 2', 'Bulk 1']);
+        expect(past).toHaveLength(0);
+      });
+
+      it('applies the minimum score before the page is taken', async () => {
+        // Scores 10 to 50. A minimum of 30 matches three of them, and a page of
+        // two has to be the top two of those three, not the top two overall.
+        for (let i = 1; i <= 5; i += 1) {
+          const lead = await seedLead({ name: `Score ${i * 10}` });
+          await seedAudit(lead.id, i * 10);
+        }
+
+        const page = await repos.leads.list({ minScore: 30, sort: 'score', limit: 2 });
+        expect(page.map((lead) => lead.opportunityScore)).toEqual([50, 40]);
+        expect(await repos.leads.count({ minScore: 30 })).toBe(3);
+      });
+
+      it('sorts an unmeasured lead last rather than as a zero', async () => {
+        const scored = await seedLead({ name: 'Scored' });
+        await seedAudit(scored.id, 5);
+        await seedLead({ name: 'Never audited' });
+
+        const rows = await repos.leads.list({ sort: 'score' });
+        expect(rows[0]?.name).toBe('Scored');
+        expect(rows.slice(1).map((lead) => lead.opportunityScore)).toEqual([null]);
+      });
+
+      it('keeps a lead whose audit failed out of a minimum score, whatever it stored', async () => {
+        // `opportunity_score` is NOT NULL, so an unavailable audit still carries
+        // a number. It is not a measurement and nothing may read it as one.
+        const lead = await seedLead({ name: 'Unreachable' });
+        await repos.audits.create({
+          leadId: lead.id,
+          status: 'unavailable',
+          startedAt: new Date(),
+          durationMs: 900,
+          metrics: {},
+          checks: [],
+          findings: [],
+          opportunityScore: 90,
+        });
+
+        expect(await repos.leads.list({ minScore: 1 })).toHaveLength(0);
+        expect(await repos.leads.count({ minScore: 1 })).toBe(0);
+        expect((await repos.leads.list())[0]?.opportunityScore).toBeNull();
+        expect((await repos.leads.list())[0]?.auditStatus).toBe('unavailable');
+      });
+    });
+
+    /*
+     * `count` exists so the list endpoint's `total` describes the rows it is
+     * counting. It used to be every lead in the database, so a filtered view of
+     * two leads still reported the whole table.
+     */
+    describe('counting with the filters', () => {
+      it('counts every lead when no filter is given', async () => {
+        await seedLead();
+        await seedLead();
+        expect(await repos.leads.count()).toBe(2);
+      });
+
+      it('counts the rows the same filter returns', async () => {
+        const sent = await seedLead({ name: 'Sent Co' });
+        await seedLead({ name: 'Lost Co' });
+        await repos.leads.setStatus(sent.id, 'sent');
+
+        expect(await repos.leads.count({ status: 'sent' })).toBe(1);
+        expect(await repos.leads.list({ status: 'sent' })).toHaveLength(1);
+      });
+
+      it('counts a text search across name, address and category', async () => {
+        await seedLead({ name: 'Sharma Plumbing', address: 'Zone 1' });
+        await repos.leads.insert({
+          placeId: 'p_count',
+          name: 'Gupta Cafe',
+          category: 'Cafe',
+          address: 'MP Nagar',
+        });
+
+        expect(await repos.leads.count({ q: 'sharma' })).toBe(1);
+        expect(await repos.leads.count({ q: 'MP Nagar' })).toBe(1);
+        expect(await repos.leads.count({ q: 'Cafe' })).toBe(1);
+        expect(await repos.leads.count({ q: 'nothing here' })).toBe(0);
+      });
+
+      it('ignores limit and offset, because a total is not a page', async () => {
+        for (let i = 0; i < 4; i += 1) await seedLead({ name: `Count ${i}` });
+        expect(await repos.leads.count({ limit: 2 })).toBe(4);
+        expect(await repos.leads.count({ limit: 2, offset: 2 })).toBe(4);
+      });
+
+      it('combines a status with a minimum score', async () => {
+        const hot = await seedLead({ name: 'Hot' });
+        await seedAudit(hot.id, 80);
+        const cold = await seedLead({ name: 'Cold' });
+        await seedAudit(cold.id, 10);
+        await repos.leads.setStatus(hot.id, 'audited');
+
+        expect(await repos.leads.count({ status: 'audited', minScore: 50 })).toBe(1);
+        expect(await repos.leads.count({ status: 'audited', minScore: 90 })).toBe(0);
+      });
+    });
+
+    /*
+     * The unscoped version of these reads returned the same lead, so no
+     * behavioural assertion could tell the two apart: it read every audit,
+     * every draft count and every lead row in the database to answer a question
+     * about one lead. What is observable is the SQL, so that is what is pinned.
+     */
+    describe('scoped reads', () => {
+      /**
+       * Every statement prepared while `fn` runs.
+       *
+       * The instance method is shadowed directly rather than through
+       * `vi.spyOn`, which does not take on better-sqlite3's native prototype.
+       * The shadow is a plain own property, so deleting it restores the real
+       * method for every test that follows.
+       */
+      async function statementsDuring(fn: () => Promise<void>): Promise<string[]> {
+        const sqlite = handle.sqlite;
+        const original = sqlite.prepare;
+        const seen: string[] = [];
+
+        // Optional so the shadow can be deleted rather than left in place.
+        type ShadowedPrepare = { prepare?: (sql: string) => unknown };
+        const shadowed = sqlite as unknown as ShadowedPrepare;
+        shadowed.prepare = (sql: string) => {
+          seen.push(sql);
+          return original.call(sqlite, sql);
+        };
+
+        try {
+          await fn();
+        } finally {
+          delete shadowed.prepare;
+        }
+
+        return seen;
+      }
+
+      it('reads only the audits and drafts of the one lead it was asked for', async () => {
+        const target = await seedLead({ name: 'Target' });
+        await seedAudit(target.id, 70);
+
+        // A crowd, so an unscoped read has something to load.
+        for (let i = 0; i < 25; i += 1) {
+          const other = await seedLead({ name: `Other ${i}` });
+          await seedAudit(other.id, 50);
+        }
+
+        const statements = await statementsDuring(async () => {
+          await repos.leads.summaryById(target.id);
+        });
+
+        const auditReads = statements.filter((sql) => /from\s+"?audits"?/i.test(sql));
+        const draftReads = statements.filter((sql) => /from\s+"?drafts"?/i.test(sql));
+
+        expect(auditReads.length).toBeGreaterThan(0);
+        expect(draftReads.length).toBeGreaterThan(0);
+
+        // A `where lead_id in (…)` is what makes this a seek instead of a scan.
+        for (const sql of [...auditReads, ...draftReads]) {
+          expect(sql).toMatch(/where/i);
+          expect(sql).toMatch(/lead_id/i);
+        }
+      });
+
+      it('scopes the list enrichment to the page it returns', async () => {
+        for (let i = 0; i < 6; i += 1) {
+          const lead = await seedLead({ name: `Batch ${i}` });
+          await seedAudit(lead.id, 60);
+        }
+
+        const statements = await statementsDuring(async () => {
+          await repos.leads.list({ limit: 2 });
+        });
+
+        const auditReads = statements.filter((sql) => /from\s+"?audits"?/i.test(sql));
+        expect(auditReads.length).toBeGreaterThan(0);
+        for (const sql of auditReads) {
+          expect(sql).toMatch(/lead_id/i);
+        }
+      });
+    });
+
     it('counts leads by status, defaulting every bucket to zero', async () => {
       const lead = await seedLead();
       await repos.leads.setStatus(lead.id, 'sent');
