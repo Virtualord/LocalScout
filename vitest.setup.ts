@@ -43,6 +43,22 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
     }) as unknown as MediaQueryList;
 }
 
+/**
+ * jsdom does not implement `ResizeObserver` either.
+ *
+ * The map measures its container to choose a desktop or mobile grid, so any test
+ * that renders a screen containing the map throws without this. Nothing in these
+ * tests depends on a measurement: the observer records nothing and reports
+ * nothing, and the component keeps its initial size.
+ */
+if (typeof window !== 'undefined' && typeof globalThis.ResizeObserver !== 'function') {
+  globalThis.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof ResizeObserver;
+}
+
 afterEach(() => {
   // Radix and the router both keep timers alive between tests; clearing them
   // stops one test's pending work from firing inside the next.

@@ -8,7 +8,6 @@ import {
   leadCellLabel,
   MOBILE_GRID,
   nearestNeighbour,
-  type MapBounds,
   type MapLead,
 } from './layout.js';
 import { useSpotlight } from './use-spotlight.js';
@@ -81,15 +80,28 @@ export function PixelMap({
   const grid = useMemo(() => (isMobile ? MOBILE_GRID : DESKTOP_GRID), [isMobile]);
 
   /**
-   * The projection box, pinned once.
+   * The projection box, pinned to the first batch that had leads.
    *
    * Recomputing per batch would shift every existing square as a live run
-   * discovers leads, so it is captured on the first render that has leads and
-   * reused after that. Held in state rather than a ref, because writing a ref
-   * during render is what the compiler rules exist to prevent.
+   * discovers leads, so the box is captured once and reused. `hasLeads` is the
+   * only dependency on purpose: keying on `leads` would recompute the box on
+   * every batch, which is the shifting this exists to prevent. A lead that
+   * arrives outside the pinned box is projected to the nearest free cell from
+   * there, so a late discovery appears at the edge instead of moving everything
+   * already on the map.
+   *
+   * A `useState` initializer cannot express this. It runs once for the life of
+   * the component, and this one is rendered before the first search answers — so
+   * it pinned *no box*, and every later batch derived a fresh one from its own
+   * leads. A memo is a cache rather than a promise, so if React discards it the
+   * box is derived from the current list again: that is the behaviour this
+   * replaces, not a new fault.
    */
-  const [bounds] = useState<MapBounds | undefined>(() =>
-    leads.length > 0 ? computeBounds(leads) : undefined,
+  const hasLeads = leads.length > 0;
+  const bounds = useMemo(
+    () => (hasLeads ? computeBounds(leads) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- latched on purpose, see above
+    [hasLeads],
   );
 
   const layout = useMemo(

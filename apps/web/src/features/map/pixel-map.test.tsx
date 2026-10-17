@@ -7,22 +7,51 @@
  * are real focusable buttons with useful names, that arrow keys move to the
  * nearest neighbour, and that reduced motion turns the effects off.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PixelMap } from './pixel-map.js';
 import { nearestNeighbour, type MapLead, type PlacedLead } from './layout.js';
 
+/**
+ * One shared 2D context for the whole file.
+ *
+ * A fresh object per `getContext` call would make "the canvas was repainted" and
+ * "the effect read a different object" indistinguishable, and the spotlight
+ * tests exist to count repaints.
+ */
+const context = {
+  setTransform: vi.fn(),
+  clearRect: vi.fn(),
+  fillRect: vi.fn(),
+};
+
 /** jsdom has no canvas; a no-op context keeps the renderer from throwing. */
 function stubCanvas(): void {
   HTMLCanvasElement.prototype.getContext = vi.fn(
-    () =>
-      ({
-        setTransform: vi.fn(),
-        clearRect: vi.fn(),
-        fillRect: vi.fn(),
-      }) as unknown as CanvasRenderingContext2D,
+    () => context as unknown as CanvasRenderingContext2D,
   ) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+}
+
+/**
+ * jsdom reports no hover capability, so the spotlight disables itself.
+ *
+ * This is the media query the hook consults to decide whether there is a pointer
+ * to track at all; without it the light is never turned on and the repaint tests
+ * would pass for the wrong reason.
+ */
+function enableHover(): void {
+  window.matchMedia = (query: string): MediaQueryList =>
+    ({
+      matches: query.includes('hover'),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as unknown as MediaQueryList;
 }
 
 const leads: MapLead[] = [
@@ -33,16 +62,8 @@ const leads: MapLead[] = [
 
 describe('PixelMap', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     stubCanvas();
-    // jsdom does not implement ResizeObserver; the map measures its container.
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        observe(): void {}
-        unobserve(): void {}
-        disconnect(): void {}
-      },
-    );
   });
 
   it('renders one button per lead', () => {
@@ -180,6 +201,121 @@ describe('PixelMap', () => {
     const { container } = render(<PixelMap leads={leads} />);
     const canvas = container.querySelector('canvas');
     expect(canvas).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  /*
+   * The projection box.
+   *
+   * Recomputing it whenever the lead list changed moved every square already on
+   * the map, which is what a live search looks like: squares sliding around as
+   * new businesses arrive. The box is pinned to the first batch instead.
+   */
+  describe('the projection box', () => {
+    const near: MapLead[] = [
+      { id: 'a', name: 'Alpha', lat: 23.24, lng: 77.41, score: 70, auditStatus: 'ok' },
+      { id: 'b', name: 'Bravo', lat: 23.26, lng: 77.43, score: 60, auditStatus: 'ok' },
+    ];
+    // Far outside the first batch's box, so any recomputation would widen it.
+    const far: MapLead = {
+      id: 'c',
+      name: 'Charlie',
+      lat: 28.61,
+      lng: 77.21,
+      score: 50,
+      auditStatus: 'ok',
+    };
+
+    const cornerOf = (name: string): string => {
+      const square = screen.getByRole('button', { name });
+      return `${square.style.left}|${square.style.top}|${square.style.width}`;
+    };
+
+    it('pins the box to the first batch, so squares already placed do not move', () => {
+      // Mounted empty first, which is the order the screen uses: the map exists
+      // before the first search has answered.
+      const { rerender } = render(<PixelMap leads={[]} />);
+      rerender(<PixelMap leads={near} />);
+
+      const before = {
+        alpha: cornerOf('Alpha, opportunity 70'),
+        bravo: cornerOf('Bravo, opportunity 60'),
+      };
+
+      rerender(<PixelMap leads={[...near, far]} />);
+
+      expect(cornerOf('Alpha, opportunity 70')).toBe(before.alpha);
+      expect(cornerOf('Bravo, opportunity 60')).toBe(before.bravo);
+      // The new lead is placed rather than dropped: outside the pinned box is a
+      // position near the edge, not a missing square.
+      expect(screen.getByRole('button', { name: 'Charlie, opportunity 50' })).toBeInTheDocument();
+    });
+  });
+
+  /*
+   * The spotlight.
+   *
+   * The light is driven by pointer state that changes every frame, and the draw
+   * used to depend only on the layout and the size, so the canvas was painted
+   * once and never again: the spotlight existed in state and nowhere on screen.
+   */
+  describe('the spotlight', () => {
+    const pointerMove = (container: HTMLElement, x: number, y: number): void => {
+      const map = container.firstElementChild;
+      if (!map) throw new Error('expected the map container');
+      fireEvent.pointerMove(map, { clientX: x, clientY: y });
+    };
+
+    it('repaints the land when the pointer moves across it', async () => {
+      enableHover();
+      const { container } = render(<PixelMap leads={leads} />);
+      const before = context.clearRect.mock.calls.length;
+
+      pointerMove(container, 120, 60);
+
+      await waitFor(() => {
+        expect(context.clearRect.mock.calls.length).toBeGreaterThan(before);
+      });
+    });
+
+    it('does not reallocate the canvas backing store to do it', async () => {
+      enableHover();
+      const { container } = render(<PixelMap leads={leads} />);
+      const canvas = container.querySelector('canvas');
+      if (!canvas) throw new Error('expected a canvas');
+
+      // Assigning `width` clears the canvas and allocates a new bitmap, which is
+      // the whole reason the draw guards it. Counting writes proves the guard.
+      let writes = 0;
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'width');
+      Object.defineProperty(canvas, 'width', {
+        configurable: true,
+        get: () => (descriptor?.get?.call(canvas) as number | undefined) ?? 0,
+        set: (value: number) => {
+          writes += 1;
+          descriptor?.set?.call(canvas, value);
+        },
+      });
+
+      const before = context.clearRect.mock.calls.length;
+      pointerMove(container, 120, 60);
+      pointerMove(container, 240, 90);
+
+      await waitFor(() => {
+        expect(context.clearRect.mock.calls.length).toBeGreaterThan(before);
+      });
+      expect(writes).toBe(0);
+    });
+
+    it('leaves the canvas alone when the pointer is not over it', () => {
+      const { container } = render(<PixelMap leads={leads} />);
+      const before = context.clearRect.mock.calls.length;
+
+      pointerMove(container, 120, 60);
+
+      // No hover capability in jsdom by default, so the hook stays off and there
+      // is nothing to repaint for.
+      expect(context.clearRect.mock.calls.length).toBe(before);
+    });
   });
 });
 

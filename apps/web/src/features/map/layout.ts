@@ -170,6 +170,17 @@ function boundsFor(leads: MapLead[]): MapBounds {
 }
 
 /**
+ * Hold a projected index inside the grid.
+ *
+ * A lead can legitimately project outside the box it is drawn in — the box is
+ * pinned to the first batch, and a search can find a business further out than
+ * anything in that batch. The nearest edge is where it belongs.
+ */
+function clampIndex(value: number, last: number): number {
+  return Math.max(0, Math.min(last, value));
+}
+
+/**
  * Spiral outward from a cell until a free land cell is found.
  *
  * The search order is fixed (ring by ring, then by angle) so two runs produce
@@ -263,9 +274,13 @@ export function layoutLeads(
     } else {
       const lngRatio = (lead.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng);
       const latRatio = (lead.lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
-      // Latitude grows northward; row 0 is the top of the map.
-      col = Math.round(lngRatio * (cols - 1));
-      row = Math.round((1 - latRatio) * (rows - 1));
+      // Latitude grows northward; row 0 is the top of the map. Projected and then
+      // held inside the grid, because a lead outside a pinned box belongs at the
+      // nearest edge: without the clamp it projects thousands of cells off-grid,
+      // where the ring search cannot reach a free cell and the lead is dropped
+      // from the map without a word.
+      col = clampIndex(Math.round(lngRatio * (cols - 1)), cols - 1);
+      row = clampIndex(Math.round((1 - latRatio) * (rows - 1)), rows - 1);
     }
 
     const cell = nearestFreeCell(land, cols, rows, col, row, taken);

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { hash, mixHex, type LayoutResult } from './layout.js';
+import { hash, mixHex, spotlightFalloff, type LayoutResult } from './layout.js';
 
 /**
  * The land renderer.
@@ -15,7 +15,6 @@ import { hash, mixHex, type LayoutResult } from './layout.js';
  */
 
 const LAND = '#5b7873';
-const LAND_DIM = '#45655e';
 const LAND_PEAK = '#b9cbc6';
 
 export interface LandCanvasProps {
@@ -41,17 +40,20 @@ export function LandCanvas({
   className = '',
 }: LandCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  /** Latest spotlight values, read inside the draw effect. */
-  const latest = useRef(spotlight);
-  const latestStrength = useRef(spotlightStrength);
 
-  // Synced in an effect rather than assigned during render: the spotlight moves
-  // every frame, and writing a ref during render is what the React Compiler
-  // rules exist to prevent.
-  useEffect(() => {
-    latest.current = spotlight;
-    latestStrength.current = spotlightStrength;
-  }, [spotlight, spotlightStrength]);
+  /*
+   * The light, read as two numbers rather than as the object it arrived in.
+   *
+   * These values used to be copied into refs by their own effect, and the draw
+   * effect below depended only on the layout and the size — so the refs were
+   * updated on every pointer move and the canvas was never repainted. The light
+   * moved and the map stayed dark.
+   *
+   * Numbers in the dependency list instead: `spotlight` is a fresh object every
+   * frame, so depending on the object would redraw even when nothing had moved.
+   */
+  const spotlightX = spotlight?.x ?? null;
+  const spotlightY = spotlight?.y ?? null;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -60,9 +62,21 @@ export function LandCanvas({
     if (!context) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
-    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const pixelWidth = Math.floor(width * dpr);
+    const pixelHeight = Math.floor(height * dpr);
+
+    /*
+     * Assigning `width` or `height` to a canvas clears it and reallocates its
+     * backing store. That was harmless while this effect ran once per layout
+     * change; now that it runs on every pointer move, assigning unconditionally
+     * would allocate a full-screen bitmap per frame and reset the transform set
+     * beside it. The size only has to be set when it has actually changed.
+     */
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
     const cellWidth = width / layout.cols;
     const cellHeight = height / layout.rows;
@@ -73,8 +87,9 @@ export function LandCanvas({
     const offsetY = (cellHeight - drawHeight) / 2;
 
     const radius = width * SPOTLIGHT_FRACTION;
-    const activeSpotlight = latest.current;
-    const strength = latestStrength.current;
+    const strength = spotlightStrength;
+    const light =
+      spotlightX === null || spotlightY === null ? null : { x: spotlightX, y: spotlightY };
 
     context.clearRect(0, 0, width, height);
 
@@ -94,19 +109,15 @@ export function LandCanvas({
           Math.abs(jitter - 0.5) * 0.12,
         );
 
-        if (activeSpotlight && strength > 0) {
+        if (light && strength > 0) {
           const cellCentreX = col * cellWidth + cellWidth / 2;
           const cellCentreY = row * cellHeight + cellHeight / 2;
-          const distance = Math.hypot(
-            cellCentreX - activeSpotlight.x,
-            cellCentreY - activeSpotlight.y,
-          );
+          const distance = Math.hypot(cellCentreX - light.x, cellCentreY - light.y);
 
           if (distance < radius) {
-            // Smoothstep, matching the pure function the tests pin.
-            const t = 1 - distance / radius;
-            const falloff = t * t * (3 - 2 * t) * strength;
-            colour = mixHex(colour, LAND_PEAK, falloff);
+            // The same smoothstep the unit tests pin, rather than a second copy
+            // of the arithmetic that could drift away from it.
+            colour = mixHex(colour, LAND_PEAK, spotlightFalloff(distance, radius) * strength);
           }
         }
 
@@ -114,7 +125,7 @@ export function LandCanvas({
         context.fillRect(x, y, drawWidth, drawHeight);
       }
     }
-  }, [layout, width, height]);
+  }, [layout, width, height, spotlightX, spotlightY, spotlightStrength]);
 
   return (
     <canvas
@@ -127,5 +138,3 @@ export function LandCanvas({
     />
   );
 }
-
-export { LAND, LAND_DIM, LAND_PEAK };

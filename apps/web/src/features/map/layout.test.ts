@@ -175,6 +175,22 @@ describe('layoutLeads', () => {
     expect(backwards.leads).toEqual(forwards.leads);
   });
 
+  it('places a lead far outside a pinned box at the edge rather than dropping it', () => {
+    // The box is pinned to the first batch, so a business found later can sit far
+    // outside it. It projects to thousands of cells away, which is beyond the
+    // ring search's reach: unclamped, it disappears from the map with no
+    // explanation.
+    const bounds = computeBounds([lead('a', 23.24, 77.41, 70), lead('b', 23.26, 77.43, 60)]);
+    const result = layoutLeads([lead('far', 28.61, 77.21, 50)], { ...grid, bounds });
+
+    expect(result.leads).toHaveLength(1);
+    const placed = result.leads[0];
+    expect(placed?.col).toBeGreaterThanOrEqual(0);
+    expect(placed?.col).toBeLessThan(grid.cols);
+    expect(placed?.row).toBeGreaterThanOrEqual(0);
+    expect(placed?.row).toBeLessThan(grid.rows);
+  });
+
   it('keeps the score and name on the placed lead', () => {
     const result = layoutLeads([lead('x', 23.25, 77.41, 82)], grid);
     expect(result.leads[0]).toMatchObject({ id: 'x', name: 'Business x', score: 82 });
