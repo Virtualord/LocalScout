@@ -233,6 +233,24 @@ const NO_FINDINGS = {
  * first run with no SENDER_NAME configured would otherwise produce. The
  * Settings screen asks for a name because the message reads better with one.
  */
+/**
+ * Give a fragment exactly one sentence terminator.
+ *
+ * Two shipped defects came from appending `.` unconditionally:
+ *
+ * - an English list fragment ran into the next sentence with no space at all;
+ * - a Hindi fragment, whose phrases already end in the danda, came out as
+ *   `।.`
+ *
+ * So this adds a terminator only when there is not already one, and never
+ * doubles it.
+ */
+function terminate(text: string): string {
+  const trimmed = text.trimEnd();
+  if (trimmed === '') return trimmed;
+  return /[.।]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
 const SENDER_INTRO = {
   en: (sender: SenderProfile) =>
     sender.name === ''
@@ -326,7 +344,11 @@ export function buildFallbackDraft(input: FallbackInput): FallbackDraft {
       portfolioLink ? PORTFOLIO_LINE[language](portfolioLink) : ''
     }\n\n${OPT_OUT[language]}`;
   } else if (!hasWebsite) {
-    whatsapp = `${openingText} ${intro}${NEXT_STEP[language]} ${OPT_OUT[language]}`;
+    // The space between `intro` and the next step is load-bearing. `SENDER_INTRO`
+    // ends in a full stop with no trailing space, and omitting the separator ran
+    // the two sentences together into "speed fixes.If it is useful". It reached
+    // a real draft in a clean-clone smoke test.
+    whatsapp = `${openingText} ${intro} ${NEXT_STEP[language]} ${OPT_OUT[language]}`;
     emailSubject =
       language === 'hi'
         ? 'आपकी वेबसाइट के बारे में'
@@ -338,7 +360,7 @@ export function buildFallbackDraft(input: FallbackInput): FallbackDraft {
       portfolioLink ? PORTFOLIO_LINE[language](portfolioLink) : ''
     }\n\n${OPT_OUT[language]}`;
   } else {
-    const withoutLink = `${openingText} ${listText}. ${NEXT_STEP[language]} ${OPT_OUT[language]}`;
+    const withoutLink = `${openingText} ${terminate(listText)} ${NEXT_STEP[language]} ${OPT_OUT[language]}`;
     const withLink = portfolioLink
       ? `${withoutLink.slice(0, -OPT_OUT[language].length - 1)}${PORTFOLIO_LINE[language](
           portfolioLink,
@@ -357,7 +379,7 @@ export function buildFallbackDraft(input: FallbackInput): FallbackDraft {
           ? `Aapni website audit mein ${cited.length} baatein`
           : `${cited.length} things I found on your website`;
 
-    emailBody = `${openingText}\n\n${listText}.\n\n${NEXT_STEP[language]}${
+    emailBody = `${openingText}\n\n${terminate(listText)}\n\n${NEXT_STEP[language]}${
       portfolioLink ? PORTFOLIO_LINE[language](portfolioLink) : ''
     }\n\n${OPT_OUT[language]}`;
   }

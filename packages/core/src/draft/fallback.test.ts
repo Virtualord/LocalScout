@@ -40,6 +40,84 @@ const build = (findings: StoredFinding[], language: Language) =>
   buildFallbackDraft({ businessName: 'Sharma Plumbing', findings, language, sender });
 
 describe('fallback templates', () => {
+  /*
+   * A separator bug in a template is invisible in code review and obvious in the
+   * message a real business owner receives. One shipped: the WhatsApp template
+   * concatenated the intro and the next step with no space, producing
+   * "speed fixes.If it is useful". This pins the general rule rather than that
+   * one string.
+   */
+  describe('sentence spacing', () => {
+    /*
+     * A separator bug in a template is invisible in code review and obvious in
+     * the message a real business owner receives. One shipped: the WhatsApp
+     * template concatenated the intro and the next step with no space, producing
+     * "speed fixes.If it is useful". This pins the general rule rather than that
+     * one string.
+     *
+     * URLs and decimals are removed first. A trailing dot in `example.com/` or a
+     * decimal point in `0.18` is not a sentence break, and a rule that flags them
+     * would be switched off the first time it produced a false positive.
+     */
+    const runsSentencesTogether = (text: string): boolean => {
+      const withoutUrls = text.replace(/\bhttps?:\/\/\S+/g, 'URL');
+      const withoutDecimals = withoutUrls.replace(/\d+\.\d+/g, 'NUM');
+      /*
+       * A word character, then a terminator, then a non-space. The word class is
+       * written as "not a separator" rather than an explicit Devanagari range,
+       * which sidesteps the combining marks: a Hindi consonant plus a vowel
+       * sign must still count as a word character before the danda.
+       */
+      const before = '.।‘“”()[]"\'`'.replace(/[.।‘“”()[\]"']/g, '');
+      return new RegExp(`[^\\s${before}][.।][^\\s]`).test(withoutDecimals);
+    };
+
+    const cases: { label: string; findings: StoredFinding[] }[] = [
+      { label: 'no findings', findings: [] },
+      { label: 'no website', findings: [noWebsite] },
+      { label: 'measured findings', findings: [slowLcp, noViewport] },
+      { label: 'a single finding', findings: [noViewport] },
+    ];
+
+    for (const { label, findings } of cases) {
+      for (const language of languages) {
+        for (const withPortfolio of [true, false]) {
+          const name = `${label}, ${language}${withPortfolio ? ', with portfolio' : ''}`;
+          const build = (): ReturnType<typeof buildFallbackDraft> =>
+            buildFallbackDraft({
+              businessName: 'Sharma Plumbing',
+              findings,
+              language,
+              sender: withPortfolio ? sender : { ...sender, portfolioUrl: undefined },
+            });
+
+          it(`never runs two sentences together in the WhatsApp draft: ${name}`, () => {
+            expect(runsSentencesTogether(build().whatsapp)).toBe(false);
+          });
+
+          it(`never runs two sentences together in the email: ${name}`, () => {
+            const draft = build();
+            expect(runsSentencesTogether(draft.email_body ?? '')).toBe(false);
+            if (draft.email_subject !== null) {
+              expect(runsSentencesTogether(draft.email_subject)).toBe(false);
+            }
+          });
+        }
+      }
+    }
+
+    it('catches the defect it was written for', () => {
+      // The rule has to be able to fail, or it is decoration.
+      expect(runsSentencesTogether('I build speed fixes.If it is useful.')).toBe(true);
+      expect(runsSentencesTogether('I build speed fixes. If it is useful.')).toBe(false);
+    });
+
+    it('does not flag a URL or a decimal', () => {
+      expect(runsSentencesTogether('My work: https://aditya.example/')).toBe(false);
+      expect(runsSentencesTogether('Layout shift was 0.18. Bad.')).toBe(false);
+    });
+  });
+
   describe('produce a grounded draft in every language', () => {
     it.each(languages)('%s with measured findings', (language) => {
       const findings = [slowLcp, noViewport];
