@@ -112,7 +112,9 @@ function LeadModalBody({
   });
 
   const createDraft = useMutation({
-    mutationFn: () => api.createDraft(leadId, 'en'),
+    // The language the person picked, not a fixed English one. The API has always
+    // accepted a language here; the screen used to override it with 'en'.
+    mutationFn: (language: Language) => api.createDraft(leadId, language),
     onSuccess: invalidate,
   });
 
@@ -227,7 +229,7 @@ function LeadModalBody({
           <TabsContent value="draft">
             <DraftTab
               drafts={data.drafts}
-              onCreate={() => createDraft.mutate()}
+              onCreate={(language) => createDraft.mutate(language)}
               creating={createDraft.isPending}
             />
           </TabsContent>
@@ -460,31 +462,80 @@ function DraftTab({
   creating,
 }: {
   drafts: Partial<Record<Language, DraftSummary>>;
-  onCreate: () => void;
+  onCreate: (language: Language) => void;
   creating: boolean;
 }) {
   const [language, setLanguage] = useState<Language>('en');
   const draft = drafts[language];
 
-  if (draft === undefined) {
-    return (
-      <div className="py-4">
-        <p className="text-[15px] text-ink/80">No {languageLabel(language)} draft yet.</p>
-        <p className="mt-2 text-[14px] text-ink/65">
-          A draft is written only from this lead&rsquo;s own recorded findings. If it has no
-          measurements, it gets no claims.
-        </p>
-        <div className="mt-5">
-          <Button variant="primary" onClick={onCreate} busy={creating}>
-            Write the draft
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5 pt-2">
+      {/*
+       * The switcher sits above the empty state, not inside the filled one.
+       *
+       * It used to be rendered only when a draft existed, so the case that
+       * needed it most — nothing written in the selected language yet — was the
+       * case that could not reach it, and Hindi and Hinglish were unreachable
+       * from the screen altogether: the request always asked for English.
+       */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Draft language">
+        {(['en', 'hinglish', 'hi'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setLanguage(option)}
+            aria-pressed={language === option}
+            aria-label={
+              drafts[option] === undefined
+                ? `${languageLabel(option)} — no draft yet`
+                : `${languageLabel(option)} — draft ready`
+            }
+            className={[
+              'mono border px-3 py-1.5 text-[11px] uppercase tracking-wider transition-colors',
+              language === option
+                ? 'border-ink bg-ink text-paper'
+                : 'border-ink/30 bg-paper text-ink/70 hover:border-ink',
+            ].join(' ')}
+          >
+            {languageLabel(option)}
+            {drafts[option] !== undefined && (
+              /*
+               * A mark so the row answers "which languages have one" without a
+               * click per language. The accessible name above carries the same
+               * fact for anyone who cannot see it.
+               */
+              <span aria-hidden="true" className="ml-1 align-super text-[9px]">
+                ●
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {draft === undefined ? (
+        <div className="py-4">
+          <p className="text-[15px] text-ink/80">No {languageLabel(language)} draft yet.</p>
+          <p className="mt-2 text-[14px] text-ink/65">
+            A draft is written only from this lead&rsquo;s own recorded findings. If it has no
+            measurements, it gets no claims.
+          </p>
+          <div className="mt-5">
+            <Button variant="primary" onClick={() => onCreate(language)} busy={creating}>
+              Write the {languageLabel(language)} draft
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <DraftContent draft={draft} />
+      )}
+    </div>
+  );
+}
+
+/** The draft itself: what it claims, how it was made, and the text to copy. */
+function DraftContent({ draft }: { draft: DraftSummary }) {
+  return (
+    <>
       <div className="flex flex-wrap items-center gap-2">
         <Chip variant={draft.grounded ? 'status-won' : 'status-lost'}>
           {draft.grounded
@@ -498,25 +549,6 @@ function DraftTab({
         <Chip variant="neutral">
           {draft.tokensIn} in / {draft.tokensOut} out
         </Chip>
-      </div>
-
-      <div className="flex gap-2" role="group" aria-label="Draft language">
-        {(['en', 'hinglish', 'hi'] as const).map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setLanguage(option)}
-            aria-pressed={language === option}
-            className={[
-              'mono border px-3 py-1.5 text-[11px] uppercase tracking-wider transition-colors',
-              language === option
-                ? 'border-ink bg-ink text-paper'
-                : 'border-ink/30 bg-paper text-ink/70 hover:border-ink',
-            ].join(' ')}
-          >
-            {languageLabel(option)}
-          </button>
-        ))}
       </div>
 
       {/* Copy, never send. This is the whole thesis. */}
@@ -553,7 +585,7 @@ function DraftTab({
           </ul>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
