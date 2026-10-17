@@ -172,24 +172,70 @@ export async function safeFetch(
 /**
  * Read a body up to a byte cap.
  *
- * The cap matters because an audit fetches arbitrary pages and a single huge
- * asset would otherwise be pulled into memory in full.
+ * Streamed, not buffered. The previous version called `response.arrayBuffer()`,
+ * which reads the entire body into memory before a single byte is dropped: the
+ * cap bounded the string handed to the caller and nothing else, so a site
+ * answering with a multi-gigabyte body would take the process down before the
+ * slice ever happened. This pulls chunks until the cap, then cancels the
+ * stream, which closes the socket instead of draining it.
+ *
+ * Decoded incrementally, because a chunk boundary routinely falls inside a
+ * UTF-8 character and a per-chunk decode would emit a replacement character in
+ * the middle of a word. A streaming decoder holds the partial sequence over.
  */
 async function readCapped(
   response: Response,
   maxBytes: number,
 ): Promise<{ body: string; truncated: boolean }> {
-  const buffer = await response.arrayBuffer();
-  const view = new Uint8Array(buffer);
+  const stream = response.body;
+  // A null body is a real case (204, HEAD) and is not an error.
+  if (stream === null) return { body: '', truncated: false };
 
-  if (view.byteLength <= maxBytes) {
-    return { body: new TextDecoder('utf-8').decode(view), truncated: false };
+  const reader = stream.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let text = '';
+  let total = 0;
+  let truncated = false;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value === undefined) continue;
+
+      const remaining = maxBytes - total;
+      if (value.byteLength > remaining) {
+        text += decoder.decode(value.subarray(0, remaining), { stream: true });
+        truncated = true;
+        break;
+      }
+
+      text += decoder.decode(value, { stream: true });
+      total += value.byteLength;
+
+      if (total === maxBytes) {
+        // Exactly at the cap, so whether this was truncation is still unknown.
+        // One more read settles it; a zero-length chunk is not more body.
+        for (;;) {
+          const next = await reader.read();
+          if (next.done === true) break;
+          if ((next.value?.byteLength ?? 0) > 0) {
+            truncated = true;
+            break;
+          }
+        }
+        break;
+      }
+    }
+  } finally {
+    // Idempotent once the stream has ended, and on the truncation path it is
+    // what stops the transfer. A failure here does not matter: the bytes
+    // already collected are valid either way.
+    await reader.cancel().catch(() => undefined);
   }
 
-  return {
-    body: new TextDecoder('utf-8').decode(view.slice(0, maxBytes)),
-    truncated: true,
-  };
+  text += decoder.decode();
+  return { body: text, truncated };
 }
 
 function headersToRecord(headers: Headers): Record<string, string> {

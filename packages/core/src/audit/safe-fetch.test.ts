@@ -158,3 +158,105 @@ describe('safeFetch against local fixture sites', () => {
     ).rejects.toThrow(/could not be reached/);
   });
 });
+
+/**
+ * The size cap has to bound memory, not just the returned string.
+ *
+ * Nothing here uses the fixture server: each test needs a body that can be
+ * counted as it is pulled, which is the only way to see the difference between
+ * "stopped reading" and "read everything, then sliced".
+ */
+describe('safeFetch body cap', () => {
+  const publicResolver: Resolver = async () => ({ addresses: ['93.184.216.34'] });
+
+  /** A response that hands out `chunks` on demand and counts what was pulled. */
+  function countedStream(chunks: Uint8Array[]): {
+    response: Response;
+    pulled: () => number;
+    cancelled: () => boolean;
+  } {
+    let pulled = 0;
+    let cancelled = false;
+
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        const chunk = chunks[pulled];
+        pulled += 1;
+        if (chunk === undefined) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(chunk);
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+
+    return {
+      response: new Response(body, { status: 200 }),
+      pulled: () => pulled,
+      cancelled: () => cancelled,
+    };
+  }
+
+  it('stops reading at the cap rather than buffering the whole body', async () => {
+    const chunk = new Uint8Array(1024).fill(65);
+    const stream = countedStream(Array.from({ length: 64 }, () => chunk));
+
+    const result = await safeFetch('http://example.com/big', {
+      fetchImpl: async () => stream.response,
+      resolver: publicResolver,
+      maxBytes: 4096,
+    });
+
+    expect(result.truncated).toBe(true);
+    expect(result.body.length).toBe(4096);
+    // The stream is closed rather than left to drain.
+    expect(stream.cancelled()).toBe(true);
+    // Proportional to the cap, not to the body: 64 KiB was offered, and a
+    // handful of chunks is all it should have taken. `arrayBuffer` would have
+    // pulled all 64 before slicing.
+    expect(stream.pulled()).toBeLessThan(10);
+  });
+
+  it('does not call a body that ends exactly at the cap truncated', async () => {
+    const stream = countedStream([new Uint8Array(64).fill(65)]);
+
+    const result = await safeFetch('http://example.com/exact', {
+      fetchImpl: async () => stream.response,
+      resolver: publicResolver,
+      maxBytes: 64,
+    });
+
+    expect(result.truncated).toBe(false);
+    expect(result.body).toHaveLength(64);
+  });
+
+  it('decodes a multi-byte character split across a chunk boundary', async () => {
+    // Every Devanagari letter is three UTF-8 bytes, so slicing at byte two
+    // splits one in half. A decoder called per chunk emits a replacement
+    // character here; a streaming one carries the partial sequence over.
+    const bytes = new TextEncoder().encode('हिन्दी');
+    const stream = countedStream([bytes.slice(0, 2), bytes.slice(2)]);
+
+    const result = await safeFetch('http://example.com/utf8', {
+      fetchImpl: async () => stream.response,
+      resolver: publicResolver,
+      maxBytes: 1024,
+    });
+
+    expect(result.body).toBe('हिन्दी');
+    expect(result.body).not.toContain('\uFFFD');
+  });
+
+  it('treats a bodyless response as empty rather than as an error', async () => {
+    const result = await safeFetch('http://example.com/empty', {
+      fetchImpl: async () => new Response(null, { status: 204 }),
+      resolver: publicResolver,
+    });
+
+    expect(result.body).toBe('');
+    expect(result.truncated).toBe(false);
+  });
+});
