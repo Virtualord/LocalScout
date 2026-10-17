@@ -196,17 +196,26 @@ describe(
         expect(result.leadsNew).toBeGreaterThan(0);
         expect(await repos.leads.all()).toHaveLength(result.leadsNew);
 
-        // The audit in flight finished and is reported. Not all of them did, and
-        // the difference is the point: the run stopped early.
-        expect(result.auditsOk).toBeGreaterThan(0);
-        expect(result.auditsOk).toBeLessThan(result.leadsNew);
+        /*
+         * The audit in flight finished and is on the record. Not every lead was
+         * audited: the run stopped early, and that difference is the point.
+         *
+         * Deliberately not asserting a *successful* measurement here. Whether the
+         * first audited site answers is the network's business, and a test that
+         * needs it to answer is an intermittent red waiting for a bad wifi
+         * moment. What the code must guarantee is that an attempt which happened
+         * is kept and reported, whatever its outcome.
+         */
+        const attempted = result.auditsOk + result.auditsFailed;
+        expect(attempted).toBeGreaterThan(0);
+        expect(attempted).toBeLessThan(result.leadsNew);
 
         // No draft pass ran, so nothing claims a message is ready.
         expect(result.draftsLlm + result.draftsFallback).toBe(0);
         expect(await repos.drafts.total()).toBe(0);
         expect((await repos.leads.all()).some((lead) => lead.status === 'drafted')).toBe(false);
 
-        // The measurement that did happen is on the record, not thrown away.
+        // The measurements that did happen are on the record, not thrown away.
         const audited = (await repos.leads.all()).filter((lead) => lead.status === 'audited');
         expect(audited).toHaveLength(result.auditsOk);
         for (const lead of audited) {

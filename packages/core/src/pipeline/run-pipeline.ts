@@ -429,6 +429,15 @@ async function auditAll(
   >();
 
   let cursor = 0;
+  /*
+   * Which leads an audit actually started for.
+   *
+   * Without this, a lead the run was cancelled before reaching is
+   * indistinguishable from a lead whose audit ran and failed: both leave no
+   * entry in `auditResults`. Only the second is a failure, and reporting the
+   * first as one says "Could not check X" about a site nobody looked at.
+   */
+  const claimed = new Set<string>();
   const workers = Array.from({ length: Math.min(concurrency, leads.length) }, async () => {
     for (;;) {
       // Stop claiming new leads when the run is cancelled; the one already in
@@ -440,6 +449,7 @@ async function auditAll(
       cursor += 1;
       const lead = leads[index];
       if (!lead) return;
+      claimed.add(lead.id);
 
       const leadLogger = logger.child({ leadId: lead.id });
 
@@ -526,6 +536,18 @@ async function auditAll(
     const audited = auditResults.get(lead.id);
 
     if (!audited) {
+      /*
+       * A lead the run never reached is not a failure.
+       *
+       * This branch used to take every lead with no audit result, which meant a
+       * cancelled run reported "Could not check" — and a failure — for leads it
+       * had stopped before even trying. Nothing about those leads failed; they
+       * keep their `discovered` status, they are counted in neither `auditsOk`
+       * nor `auditsFailed`, and the run's own `run.cancelled` event is what says
+       * the run stopped early.
+       */
+      if (!claimed.has(lead.id)) continue;
+
       // Either the site was unreachable or the audit threw. The lead stays in
       // the list with no score so the user can see it and re-run it.
       emit({

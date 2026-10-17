@@ -15,9 +15,11 @@ now works.
 
 - **Stop a search.** `POST /api/runs/:id/cancel` and a button on the runs screen.
   Cancellation is cooperative: the audit already in flight finishes and stays on
-  the record, and nothing after it starts. The refusal a second search gets while
-  one is running has always told the user to stop the first one from the runs
-  screen, and until now there was no control there to do it with.
+  the record, and nothing after it starts. A lead the run stopped before reaching
+  keeps its `discovered` status — it is neither audited nor failed, because
+  nothing about it was tried. The refusal a second search gets while one is
+  running has always told the user to stop the first one from the runs screen, and
+  until now there was no control there to do it with.
 - **Reaping.** A run whose process died stayed `running` forever, which refused
   every later search until the row was edited by hand. The API now marks those
   runs failed at boot and at shutdown, with the reason written into the row.
