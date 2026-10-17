@@ -21,8 +21,12 @@ import { isIP } from 'node:net';
  *   metadata), 100.64.0.0/10 (carrier NAT), and the IPv6 equivalents.
  * - **Redirects are re-checked**, because a public host can answer 302 with a
  *   Location pointing straight at the metadata service.
- * - **The resolved address is pinned** for the request, so a second DNS lookup
- *   cannot return a different answer between the check and the fetch.
+ * - **Every resolved address is checked, and none is pinned.** All addresses a
+ *   name resolves to are verified, and the set is returned so the caller can
+ *   record which host it checked. The request then performs its own lookup: a
+ *   hostile resolver could answer the check and the request differently, and the
+ *   browser used for measurements resolves once more on top of that. That
+ *   residual is accepted, and ADR-0002 says why.
  */
 
 export type BlockedReason =
@@ -326,7 +330,9 @@ export async function assertPublicHost(
 /**
  * Full check for one URL: syntax, scheme, then resolved addresses.
  *
- * Returns the addresses so the caller can pin them for the request.
+ * Returns the addresses it verified so the caller can record which host passed
+ * the check. They are not enforced on the request itself; the header of this
+ * file and ADR-0002 explain that residual.
  */
 export async function assertFetchable(
   rawUrl: string,

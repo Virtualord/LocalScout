@@ -10,6 +10,7 @@ reader can see not just what the code does but why.
 
 ## Index
 
-| ADR                           | Title                               | Status   | Date       |
-| ----------------------------- | ----------------------------------- | -------- | ---------- |
-| [0001](0001-stack-choices.md) | Stack choices and what was left out | Accepted | 2026-10-13 |
+| ADR                                    | Title                                                 | Status   | Date       |
+| -------------------------------------- | ----------------------------------------------------- | -------- | ---------- |
+| [0001](0001-stack-choices.md)          | Stack choices and what was left out                   | Accepted | 2026-10-13 |
+| [0002](0002-unpinned-dns-in-audits.md) | The SSRF guard checks addresses but does not pin them | Accepted | 2026-10-17 |
