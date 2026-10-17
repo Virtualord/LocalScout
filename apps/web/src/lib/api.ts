@@ -237,6 +237,14 @@ export const api = {
 
   run: (id: string) => request<{ run: RunSummary }>(`/runs/${id}`),
 
+  /**
+   * Stop a run.
+   *
+   * Cooperative: the audit already in flight finishes and stays on the record,
+   * and nothing after it is started.
+   */
+  cancelRun: (id: string) => request<{ run: RunSummary }>(`/runs/${id}/cancel`, { method: 'POST' }),
+
   leads: (params: {
     status?: LeadStatus;
     minScore?: number;

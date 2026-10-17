@@ -1,7 +1,8 @@
 import type { RunStatus } from '@localscout/core';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { InteriorHero } from '../../components/sections.js';
+import { Button } from '../../design/button.js';
 import { Card, ComparisonRow } from '../../design/card.js';
 import { Chip } from '../../design/chip.js';
 import { api, type RunSummary } from '../../lib/api.js';
@@ -14,6 +15,10 @@ import { queryKeys } from '../../lib/query-keys.js';
  * was drafted, and what it cost. Failures are shown with their error rather
  * than hidden, because a run that found nothing usually means the key is
  * missing or the query was too narrow, and both are worth knowing.
+ *
+ * A run that is still going can be stopped from here. That is the way out of the
+ * "a search is already running" refusal on the home screen, and the way to
+ * recover from a run whose process died: until it ends, no new search can start.
  */
 
 export function RunsScreen() {
@@ -75,6 +80,19 @@ export function RunsScreen() {
 }
 
 function RunCard({ run }: { run: RunSummary }) {
+  const queryClient = useQueryClient();
+
+  const cancel = useMutation({
+    mutationFn: () => api.cancelRun(run.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.runs });
+    },
+  });
+
+  // Only a run that is going somewhere can be stopped. A finished, failed or
+  // already-cancelled run has nothing left to stop.
+  const stoppable = run.status === 'queued' || run.status === 'running';
+
   return (
     <Card className="p-0">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-ink/20 px-5 py-4">
@@ -87,7 +105,14 @@ function RunCard({ run }: { run: RunSummary }) {
             · {run.language}
           </p>
         </div>
-        <Chip variant={statusVariant(run.status)}>{run.status}</Chip>
+        <div className="flex items-center gap-3">
+          <Chip variant={statusVariant(run.status)}>{run.status}</Chip>
+          {stoppable && (
+            <Button variant="secondary" onClick={() => cancel.mutate()} busy={cancel.isPending}>
+              Stop this search
+            </Button>
+          )}
+        </div>
       </header>
 
       <div className="grid gap-x-8 sm:grid-cols-2">
@@ -103,9 +128,27 @@ function RunCard({ run }: { run: RunSummary }) {
         />
       </div>
 
+      {/*
+       * A cancelled run stopped early on purpose, so its counters are smaller
+       * than they look and the row says why. Without this, a stopped search is
+       * indistinguishable from one that found nothing.
+       */}
+      {run.status === 'cancelled' && (
+        <p className="border-t border-ink/20 bg-paper-band px-5 py-3 text-[14px] text-ink/80">
+          Stopped before it finished. The leads it had already found and checked are kept; the rest
+          were never looked at.
+        </p>
+      )}
+
       {run.error !== null && (
         <p className="border-t border-ink/20 bg-red/5 px-5 py-3 text-[14px] text-red">
           {run.error}
+        </p>
+      )}
+
+      {cancel.isError && (
+        <p className="border-t border-ink/20 bg-red/5 px-5 py-3 text-[14px] text-red">
+          {cancel.error instanceof Error ? cancel.error.message : 'Could not stop the search.'}
         </p>
       )}
     </Card>
