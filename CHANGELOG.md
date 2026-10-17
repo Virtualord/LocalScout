@@ -67,7 +67,7 @@ search.
 
 ### Quality
 
-- 725 fast tests and 5 slow ones, the slow suite exercising real Lighthouse
+- 775 fast tests and 5 slow ones, the slow suite exercising real Lighthouse
   against local fixtures with a real Chrome.
 - A Playwright suite at 1440px and 390px covering every route, the keyboard
   path and the full search-to-draft flow, with axe-core on every route.
@@ -93,6 +93,11 @@ misleading screen, and each is now pinned by a test.
 - Expanded `0:0:0:0:0:0:0:1` and every IPv6 private range bypassed the SSRF
   guard until the address classifier was rewritten.
 - An empty resolver result failed open instead of closed.
+- Two shipped templates ran sentences together: the English WhatsApp draft
+  produced "speed fixes.If it is useful", and the Hindi draft doubled its
+  terminator into "।.". Both were found by a clean-clone smoke test rather
+  than by review, and both are now pinned by a rule that covers every template
+  in every language.
 
 [Unreleased]: ./compare/v0.1.0...HEAD
 [0.1.0]: ./releases/tag/v0.1.0
