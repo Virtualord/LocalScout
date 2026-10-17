@@ -138,7 +138,18 @@ test('a search produces a lead with an audit and a draft', async ({ page }, test
   await expect(draft).toBeVisible();
 
   const copyButtons = draft.getByRole('button', { name: /^copy$/i });
-  const writeButton = draft.getByRole('button', { name: /write the draft/i });
+  const writeButton = draft.getByRole('button', { name: /write the .+ draft/i });
+
+  /*
+   * The language is picked on this tab, and it used to be pickable only once a
+   * draft already existed — so the case that needed it most, nothing written in
+   * the selected language, was the one case with no switcher at all. It is here
+   * whether or not a draft exists, with a name that says which languages have
+   * one.
+   */
+  const languages = draft.getByRole('group', { name: 'Draft language' });
+  await expect(languages).toBeVisible();
+  await expect(languages.getByRole('button')).toHaveCount(3);
 
   if ((await copyButtons.count()) > 0) {
     await expect(copyButtons.first()).toBeVisible();

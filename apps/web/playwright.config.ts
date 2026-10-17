@@ -112,8 +112,13 @@ export default defineConfig({
       env: {
         API_PORT: String(API_PORT),
         DATA_DIR: E2E_DATA_DIR,
-        // No key, no model, no Chrome. The fixtures path is the supported
-        // zero-configuration setup, so that is what the suite runs against.
+        // No key and no model: fixtures answer both discovery and drafting, so
+        // the suite needs neither an account nor a download. Chrome is *not*
+        // forced out of the picture — where it is installed, the audits can carry
+        // real Lighthouse metrics, which is what puts the flow test's
+        // draft-already-exists branch within reach on a normal machine, while the
+        // write-a-draft branch covers the runs where the sites could not be
+        // reached.
         DISCOVERY_MODE: 'fixtures',
         LLM_PROVIDER: 'fixture',
       },
