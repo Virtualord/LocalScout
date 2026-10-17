@@ -49,6 +49,16 @@ export interface PipelineDeps {
   emit: Emit;
   provider: LlmProvider;
   sender: SenderProfile;
+  /**
+   * Cooperative cancellation, from the API's per-run controller.
+   *
+   * Checked between leads rather than inside a request. An audit is a chain of
+   * fetches and a Chrome run, and tearing one down mid-flight would turn a
+   * cancel into a failed audit recorded against an innocent business. Stopping
+   * at the next boundary costs at most the lead already in flight, and leaves
+   * every measurement on the record true.
+   */
+  signal?: AbortSignal | undefined;
   /** Overrides for tests, chiefly the fetch resolver. */
   auditConfig?: Partial<AuditConfig>;
   discoverOptions?: Partial<DiscoverOptions>;
@@ -69,7 +79,7 @@ export interface LeadOutcome {
 
 export interface PipelineResult {
   runId: string;
-  status: 'completed' | 'failed';
+  status: 'completed' | 'failed' | 'cancelled';
   leadsFound: number;
   leadsNew: number;
   skippedDuplicates: number;
@@ -120,6 +130,11 @@ export async function runPipeline(
     message: `Searching for ${input.query} in ${input.location}`,
     data: { query: input.query, location: input.location, limit: input.limit },
   });
+
+  // Stopped before the first request. Worth checking here rather than only in
+  // the audit loop: discovery is the one stage that spends money, and a run
+  // nobody is waiting for should not buy a page of results.
+  if (isCancelled(deps)) return finishCancelled(input, deps, result);
 
   await repos.runs.setStatus(input.runId, 'running');
 
@@ -249,6 +264,11 @@ export async function runPipeline(
     tokensOut: result.tokensOut,
   });
 
+  // Checked after the counters, so a run stopped halfway still reports the
+  // leads it did find and audit. A cancelled run that reported zeroes would
+  // read as a run that found nothing, which is a different and untrue story.
+  if (isCancelled(deps)) return finishCancelled(input, deps, result);
+
   await repos.runs.setStatus(input.runId, 'completed');
 
   const elapsedMs = Date.now() - startedAt;
@@ -263,12 +283,47 @@ export async function runPipeline(
   return result;
 }
 
+/**
+ * Whether the run has been cancelled.
+ *
+ * A function rather than reading `signal.aborted` at each site, because
+ * `aborted` is a readonly property on the type: TypeScript narrows it after the
+ * first check and then believes it can never become true, which is exactly what
+ * it does the moment someone presses Cancel.
+ */
+function isCancelled(deps: PipelineDeps): boolean {
+  return deps.signal?.aborted === true;
+}
+
+/**
+ * End a run because someone stopped it.
+ *
+ * Distinct from a failure, and recorded as such. A cancelled run is not a run
+ * that went wrong: the leads it already found are kept, its counters stand, and
+ * the status says a person chose to stop rather than that the tool broke.
+ */
+async function finishCancelled(
+  input: PipelineInput,
+  deps: PipelineDeps,
+  result: PipelineResult,
+): Promise<PipelineResult> {
+  result.status = 'cancelled';
+  await deps.repos.runs.setStatus(input.runId, 'cancelled');
+
+  deps.emit({
+    type: 'run.cancelled',
+    message: `Stopped. ${result.leadsNew} leads found and kept.`,
+  });
+  deps.logger.info({ runId: input.runId, leadsNew: result.leadsNew }, 'run.cancelled');
+
+  return result;
+}
+
 interface AuditedItem {
   outcome: LeadOutcome;
   tokensIn: number;
   tokensOut: number;
 }
-
 type AuditOutcome = SourceResult<AuditResult>;
 
 /** Audit a lead that has a website of its own. */
@@ -376,6 +431,11 @@ async function auditAll(
   let cursor = 0;
   const workers = Array.from({ length: Math.min(concurrency, leads.length) }, async () => {
     for (;;) {
+      // Stop claiming new leads when the run is cancelled; the one already in
+      // flight finishes and is recorded, because a half-measured audit is worse
+      // than no audit at all.
+      if (isCancelled(deps)) return;
+
       const index = cursor;
       cursor += 1;
       const lead = leads[index];
@@ -481,6 +541,31 @@ async function auditAll(
           status: 'failed',
           opportunityScore: 0,
           findingIds: [],
+        },
+        tokensIn: 0,
+        tokensOut: 0,
+      });
+      continue;
+    }
+
+    /*
+     * A cancelled run stops writing drafts and keeps what it already has.
+     *
+     * The audit that finished is a real measurement, so it is reported as
+     * audited with no draft rather than dropped, and then the loop stops. The
+     * leads after this one were never audited and are not counted as failures,
+     * because nothing about them failed. A cancelled run that reported zero
+     * audits after measuring three sites would be a worse answer than the delay
+     * cancelling was meant to save.
+     */
+    if (isCancelled(deps)) {
+      items.push({
+        outcome: {
+          leadId: lead.id,
+          name: lead.name,
+          status: 'audited',
+          opportunityScore: audited.score,
+          findingIds: audited.findings.map((finding) => finding.id),
         },
         tokensIn: 0,
         tokensOut: 0,

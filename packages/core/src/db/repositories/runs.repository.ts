@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, not, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
-import { runs, type Language, type NewRun, type Run, type RunStatus } from '../schema.js';
+import {
+  isRunFinished,
+  RUN_TERMINAL_STATUSES,
+  runs,
+  type Language,
+  type NewRun,
+  type Run,
+  type RunStatus,
+} from '../schema.js';
 
 /**
  * Run persistence.
@@ -65,18 +73,49 @@ export class RunRepository {
     return found;
   }
 
+  /**
+   * Move a run to a status.
+   *
+   * One way out of a terminal state: a run that has completed, failed or been
+   * cancelled is not moved again. Two things depend on that. Cancelling is a
+   * human decision, so a pipeline still in flight when the cancel landed must
+   * not flip the run back to `completed` afterwards. And a run whose process
+   * died is reaped as failed at the next startup; the process is gone, but a
+   * pending write must not be able to argue with the verdict.
+   */
   async setStatus(id: string, status: RunStatus, error?: string): Promise<void> {
     this.db
       .update(runs)
       .set({
         status,
         ...(error !== undefined ? { error } : {}),
-        ...(status === 'completed' || status === 'failed' || status === 'cancelled'
-          ? { finishedAt: new Date() }
-          : {}),
+        ...(isRunFinished(status) ? { finishedAt: new Date() } : {}),
       })
-      .where(eq(runs.id, id))
+      .where(and(eq(runs.id, id), not(inArray(runs.status, [...RUN_TERMINAL_STATUSES]))))
       .run();
+  }
+
+  /**
+   * Fail every run left behind by a process that is no longer running.
+   *
+   * Called once at API startup. A run lives inside one process, so at boot any
+   * row still marked `queued` or `running` belongs to a process that has
+   * stopped: a crash, a `kill -9`, or a dev-server restart. Nothing else would
+   * ever clear it, and because only one run may be active at a time, that row
+   * would refuse every future search for the life of the database.
+   *
+   * Deliberately not called from the CLI. The API may legitimately be carrying
+   * a run while a CLI process starts, and a short-lived command has no standing
+   * to declare another process's work dead.
+   */
+  async failInterruptedRuns(reason: string): Promise<number> {
+    const result = this.db
+      .update(runs)
+      .set({ status: 'failed', error: reason, finishedAt: new Date() })
+      .where(sql`${runs.status} in ('queued', 'running')`)
+      .run();
+
+    return result.changes;
   }
 
   /**

@@ -834,6 +834,152 @@ describe('repositories', () => {
       expect((await repos.runs.requireById(run.id)).error).toContain('SerpApi');
     });
 
+    /*
+     * A run's verdict is written once. Cancelling is a person deciding to stop,
+     * and a run reaped at startup is the only evidence that a process died; in
+     * both cases a later write must not be able to argue with it.
+     */
+    describe('a finished run stays finished', () => {
+      it('does not move a completed run back to running', async () => {
+        const run = await repos.runs.create({
+          query: 'a',
+          location: 'b',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(run.id, 'completed');
+        await repos.runs.setStatus(run.id, 'running');
+
+        expect((await repos.runs.requireById(run.id)).status).toBe('completed');
+      });
+
+      it('does not let a late completion overwrite a cancel', async () => {
+        const run = await repos.runs.create({
+          query: 'a',
+          location: 'b',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(run.id, 'running');
+        await repos.runs.setStatus(run.id, 'cancelled');
+
+        // The pipeline that was still in flight when the cancel landed.
+        await repos.runs.setStatus(run.id, 'completed');
+
+        const stored = await repos.runs.requireById(run.id);
+        expect(stored.status).toBe('cancelled');
+        expect(await repos.runs.activeRun()).toBeUndefined();
+      });
+
+      it('does not let a late failure overwrite a cancel', async () => {
+        const run = await repos.runs.create({
+          query: 'a',
+          location: 'b',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(run.id, 'cancelled');
+        await repos.runs.setStatus(run.id, 'failed', 'the process died');
+
+        const stored = await repos.runs.requireById(run.id);
+        expect(stored.status).toBe('cancelled');
+        expect(stored.error).toBeNull();
+      });
+
+      it('still moves a queued run forward', async () => {
+        const run = await repos.runs.create({
+          query: 'a',
+          location: 'b',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(run.id, 'running');
+        await repos.runs.setStatus(run.id, 'completed');
+
+        expect((await repos.runs.requireById(run.id)).status).toBe('completed');
+      });
+
+      it('does not stamp a finish time on a run that is only running', async () => {
+        const run = await repos.runs.create({
+          query: 'a',
+          location: 'b',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(run.id, 'running');
+        expect((await repos.runs.requireById(run.id)).finishedAt).toBeNull();
+      });
+    });
+
+    /*
+     * Reaping is what stops a crash from bricking the tool: only one run may be
+     * active at a time, so a row left `running` by a dead process would refuse
+     * every future search for the life of the database.
+     */
+    describe('failInterruptedRuns', () => {
+      it('fails queued and running runs and leaves finished ones alone', async () => {
+        const queued = await repos.runs.create({
+          query: 'a',
+          location: 'b',
+          limit: 5,
+          language: 'en',
+        });
+        const running = await repos.runs.create({
+          query: 'c',
+          location: 'd',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(running.id, 'running');
+        const done = await repos.runs.create({
+          query: 'e',
+          location: 'f',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(done.id, 'completed');
+        const cancelled = await repos.runs.create({
+          query: 'g',
+          location: 'h',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(cancelled.id, 'cancelled');
+
+        const reaped = await repos.runs.failInterruptedRuns('The process stopped.');
+
+        expect(reaped).toBe(2);
+        for (const id of [queued.id, running.id]) {
+          const stored = await repos.runs.requireById(id);
+          expect(stored.status).toBe('failed');
+          expect(stored.error).toBe('The process stopped.');
+          expect(stored.finishedAt).not.toBeNull();
+        }
+        expect((await repos.runs.requireById(done.id)).status).toBe('completed');
+        expect((await repos.runs.requireById(cancelled.id)).status).toBe('cancelled');
+      });
+
+      it('frees the active-run slot so the next search can start', async () => {
+        const stranded = await repos.runs.create({
+          query: 'a',
+          location: 'b',
+          limit: 5,
+          language: 'en',
+        });
+        await repos.runs.setStatus(stranded.id, 'running');
+        expect((await repos.runs.activeRun())?.id).toBe(stranded.id);
+
+        await repos.runs.failInterruptedRuns('The process stopped.');
+
+        // Without this the next search would be refused forever.
+        expect(await repos.runs.activeRun()).toBeUndefined();
+      });
+
+      it('reports zero when there is nothing to reap', async () => {
+        expect(await repos.runs.failInterruptedRuns('The process stopped.')).toBe(0);
+      });
+    });
+
     it('finds the single active run', async () => {
       expect(await repos.runs.activeRun()).toBeUndefined();
 

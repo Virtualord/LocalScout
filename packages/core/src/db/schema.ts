@@ -65,6 +65,21 @@ export const RUN_STATUSES = ['queued', 'running', 'completed', 'failed', 'cancel
 export type RunStatus = (typeof RUN_STATUSES)[number];
 
 /**
+ * Statuses a run cannot leave.
+ *
+ * A run is finished once, and the verdict is not rewritten afterwards: a
+ * cancelled run must not be flipped to `completed` by a pipeline that was still
+ * in flight when the cancel landed, and a run reaped as failed at startup must
+ * not be overwritten either.
+ */
+export const RUN_TERMINAL_STATUSES = ['completed', 'failed', 'cancelled'] as const;
+
+/** True when a run has stopped, whichever way it stopped. */
+export function isRunFinished(status: RunStatus): boolean {
+  return (RUN_TERMINAL_STATUSES as readonly string[]).includes(status);
+}
+
+/**
  * Milliseconds since the epoch, as an integer.
  *
  * `unixepoch()` alone truncates to whole seconds, which makes "the newest audit

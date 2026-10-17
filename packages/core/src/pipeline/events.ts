@@ -17,6 +17,7 @@ export type RunEventName =
   | 'audit.finished'
   | 'draft.finished'
   | 'run.finished'
+  | 'run.cancelled'
   | 'run.failed';
 
 export interface RunEvent {

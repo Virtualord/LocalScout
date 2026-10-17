@@ -95,6 +95,10 @@ describe(
         limit?: number;
         language?: Language;
         provider?: FixtureProvider;
+        /** Wired into the pipeline, so a test can cancel a run in flight. */
+        signal?: AbortSignal;
+        /** Aborted the moment the first audit starts, which is mid-run. */
+        abortOnFirstAudit?: AbortController;
       } = {},
     ): Promise<PipelineResult> => {
       const runRow = await repos.runs.create({
@@ -119,7 +123,14 @@ describe(
         },
         {
           ...makeDeps({ ...(over.provider ? { provider: over.provider } : {}) }),
-          emit: recorder.emit,
+          ...(over.signal ? { signal: over.signal } : {}),
+          emit:
+            over.abortOnFirstAudit === undefined
+              ? recorder.emit
+              : (event) => {
+                  recorder.emit(event);
+                  if (event.type === 'audit.started') over.abortOnFirstAudit?.abort();
+                },
         },
       );
     };
@@ -133,6 +144,75 @@ describe(
 
       const leads = await repos.leads.all();
       expect(leads.length).toBe(result.leadsNew);
+    });
+
+    /*
+     * Cancelling is cooperative and checked between leads, so what these tests
+     * pin is where the loop stops, not that a request was torn down mid-flight.
+     * A torn-down request would leave a failed audit recorded against a business
+     * whose site was perfectly reachable, which is the one thing this tool must
+     * not do.
+     */
+    describe('cancellation', () => {
+      it('stops before discovery when it was already cancelled', async () => {
+        const controller = new AbortController();
+        controller.abort();
+
+        const result = await run({ signal: controller.signal });
+
+        expect(result.status).toBe('cancelled');
+        // Nothing was bought and no business was looked up.
+        expect(result.serpApiCalls).toBe(0);
+        expect(result.leadsFound).toBe(0);
+        expect(await repos.leads.all()).toHaveLength(0);
+      });
+
+      it('records the run as cancelled rather than completed or failed', async () => {
+        const controller = new AbortController();
+        controller.abort();
+
+        const result = await run({ signal: controller.signal });
+        const row = await repos.runs.byId(result.runId);
+
+        expect(row?.status).toBe('cancelled');
+        expect(row?.finishedAt).toBeInstanceOf(Date);
+        expect(events.at(-1)?.type).toBe('run.cancelled');
+        expect(events.some((event) => event.type === 'run.finished')).toBe(false);
+      });
+
+      it('keeps the audits it completed and writes no drafts after a mid-run cancel', async () => {
+        const controller = new AbortController();
+
+        const result = await run({
+          query: '',
+          limit: 20,
+          signal: controller.signal,
+          abortOnFirstAudit: controller,
+        });
+
+        expect(result.status).toBe('cancelled');
+
+        // The leads the search already paid for are kept.
+        expect(result.leadsNew).toBeGreaterThan(0);
+        expect(await repos.leads.all()).toHaveLength(result.leadsNew);
+
+        // The audit in flight finished and is reported. Not all of them did, and
+        // the difference is the point: the run stopped early.
+        expect(result.auditsOk).toBeGreaterThan(0);
+        expect(result.auditsOk).toBeLessThan(result.leadsNew);
+
+        // No draft pass ran, so nothing claims a message is ready.
+        expect(result.draftsLlm + result.draftsFallback).toBe(0);
+        expect(await repos.drafts.total()).toBe(0);
+        expect((await repos.leads.all()).some((lead) => lead.status === 'drafted')).toBe(false);
+
+        // The measurement that did happen is on the record, not thrown away.
+        const audited = (await repos.leads.all()).filter((lead) => lead.status === 'audited');
+        expect(audited).toHaveLength(result.auditsOk);
+        for (const lead of audited) {
+          expect(await repos.audits.latestForLead(lead.id)).toBeDefined();
+        }
+      });
     });
 
     /**
