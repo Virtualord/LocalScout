@@ -39,6 +39,12 @@ async function main(): Promise<void> {
     `Discovery: ${runtime.config.discovery.mode}, drafts: ${runtime.config.llm.provider}\n`,
   );
 
+  if (runtime.config.auth.publicAccess) {
+    runtime.logger.warn(
+      'auth.public_access: this deployment serves anyone who can reach it; there is no sign-in.',
+    );
+  }
+
   if (runtime.config.scheduler.enabled) {
     const scheduler = await startScheduler({
       repos: runtime.repos,
