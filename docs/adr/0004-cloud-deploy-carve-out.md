@@ -27,10 +27,12 @@ away:
    interface (`SERVE_WEB`), so the browser sees one origin: no CORS between
    halves, no cross-origin negotiation for the SSE stream, and one sign-in
    covers the UI and the API.
-2. **Loopback stays the default, and beyond it a token is mandatory.** The
-   config loader refuses a non-loopback `HOST` without `AUTH_TOKEN`, and a
-   token shorter than 16 characters is refused everywhere. The token gates
-   every route except `/api/health`.
+2. **Loopback stays the default; beyond it, one of two named shapes.** The
+   config loader refuses a non-loopback `HOST` with neither `AUTH_TOKEN` nor
+   an explicit `ALLOW_PUBLIC_ACCESS=true`, refuses a token shorter than 16
+   characters everywhere, and refuses the two together: a deploy is gated or
+   public, never both. The token (gated shape) covers every route except
+   `/api/health`.
 3. **One instance, a disk for persistence.** Runs live in their process and
    SQLite is a single writer, so scaling is refused rather than pretended; a
    disk pins the service to one instance anyway. The blueprint defaults to
@@ -50,9 +52,12 @@ away:
   the interface to Vercel statically" is possible, but the API still needs a
   container host with a disk, so the split adds CORS and SSE-auth surface to
   buy nothing for a single-user tool. `docs/DEPLOY.md` says this plainly.
-- **Public without a token.** Anyone with the URL could spend the SerpApi
-  quota and read the lead database. Refused by the config loader rather than
-  left to a warning.
+- **Public without a token, as a quiet default.** Anyone with the URL could
+  spend the SerpApi quota and read the lead database. It became a named
+  setting instead — `ALLOW_PUBLIC_ACCESS=true` — once the maintainer's own
+  free instance needed to be a public demo: the un-named case is still
+  refused, and the named one is repeated by the boot log so nobody has to
+  remember which shape is live.
 - **A hosted database (Postgres, Turso) to fit serverless.** Would move the
   data somewhere the projection never intended, for no gain at one user.
 - **Multi-instance behind a load balancer.** Splits runs from their process
@@ -65,7 +70,8 @@ away:
 - A deployment is a configuration choice, not a fork: same code, same tests,
   same fixtures-mode quickstart.
 - The local default remains three commands with no keys.
-- The token rule makes the unsafe binding impossible to reach by accident.
+- The token rule makes the unsafe binding impossible to reach by accident;
+  the public shape exists only as a name set on purpose.
 
 ### Negative
 
@@ -82,6 +88,10 @@ away:
   restart and idle spin-down, and no shell, so it cannot be retrieved before
   it does. The blueprint says so where it matters rather than letting someone
   lose leads quietly.
+- The repository's blueprint serves publicly, because the maintainer's
+  instance is a fixtures-mode demo: anyone with the URL can read and run
+  everything. The moment it holds real leads or a paid key it wants the token
+  back, and `docs/DEPLOY.md` says so where the switch is described.
 - Lighthouse is CPU-bound: slow on a 0.5 CPU install, impractical on free's
   0.1. The blueprint comments say which plan is for what.
 
@@ -102,7 +112,9 @@ away:
   a missing image rather than the document, `/api/health` open, and the
   hashed asset served with `immutable`.
 - The config rules and the middleware have unit and integration tests (the
-  fast suite: 912 tests at the time of writing).
+  fast suite: 914 tests at the time of writing), including the two
+  public-access refusals: a non-loopback host with neither shape, and both
+  shapes at once.
 - Not verified here: the image build itself and the platform's behavior
   (disk mount, TLS, health checks). There is no Docker daemon on the author's
   machine; the first deploy is the first image build, and `docs/DEPLOY.md`

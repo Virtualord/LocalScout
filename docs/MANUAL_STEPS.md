@@ -186,8 +186,9 @@ discovery, and the cost list are in [DEPLOY.md](DEPLOY.md); the shape of it:
 # 2. In the host's dashboard: New > Blueprint, pick this repository.
 #    The repository ships the Dockerfile and render.yaml the blueprint reads.
 
-# 3. Open the deployed URL. The browser asks to sign in once: any username,
-#    and the AUTH_TOKEN the platform generated as the password.
+# 3. Open the deployed URL. The blueprint serves it publicly: no sign-in. To
+#    gate it instead, swap ALLOW_PUBLIC_ACCESS for a generated AUTH_TOKEN in
+#    render.yaml (DEPLOY.md walks both shapes).
 ```
 
 Why the deploy is a single service, why Vercel and other serverless hosts
