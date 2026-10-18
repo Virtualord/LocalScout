@@ -14,7 +14,7 @@
   "dependencies": {
     "@hono/node-server": "^2.1.5",
     "@localscout/core": "workspace:*",
-    "@mastra/core": "^1.76.0",
+    "@mastra/core": "^1.77.0",
     "hono": "^4.13.13",
     "pino": "^10.4.0",
     "zod": "^4.6.7"

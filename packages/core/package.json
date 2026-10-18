@@ -15,7 +15,7 @@
     "fixtures:generate": "tsx scripts/generate-fixtures.ts"
   },
   "dependencies": {
-    "@mastra/core": "^1.76.0",
+    "@mastra/core": "^1.77.0",
     "better-sqlite3": "^13.0.3",
     "chrome-launcher": "^1.2.2",
     "drizzle-orm": "^0.45.4",
