@@ -1,12 +1,18 @@
 # The Render blueprint for the single-service deploy: one Docker web service
-# that serves the API, the interface and the audits, with the SQLite database
-# on a persistent disk. Local development never reads this file.
+# that serves the API, the interface and the audits.
+#
+# It defaults to Render's free plan, so applying it needs no payment method.
+# Free is a trial shape, from Render's own docs: 0.1 CPU / 512 MB, a spin-down
+# after fifteen idle minutes with a slow wake, and a filesystem that resets on
+# every deploy, restart and spin-down — the database does not survive any of
+# them, and there is no shell or disk to retrieve it. That is fine for walking
+# the whole app; for leads that persist, switch `plan` and uncomment the disk
+# at the bottom. docs/DEPLOY.md says the same in more words.
 #
 # Setup: push this repository to a Git host, then in Render choose
 # Blueprints -> New Blueprint Instance and pick the repository. The values
 # marked `sync: false` are asked for once; everything else is a default that
-# matches the app's design. docs/DEPLOY.md has the walkthrough and the
-# reasoning.
+# matches the app's design.
 
 services:
   - type: web
@@ -14,9 +20,10 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     region: singapore # Closest Render region to India; change to suit.
-    # 0.5 CPU is enough to run the app; Lighthouse is CPU-bound, so a batch of
-    # audits takes minutes. The next size up (1c-2g) roughly halves that.
-    plan: 0.5c-512mb
+    # free needs no card. 0.5c-512mb is the smallest paid size where
+    # Lighthouse is usable, 1c-2g is the fast one; both paid sizes expect the
+    # disk below, and free cannot have one.
+    plan: free
     # Deploy on every push to the connected branch. `checksPass` is the other
     # honest option once the host runs this repo's CI; `off` deploys only from
     # the dashboard button.
@@ -29,7 +36,9 @@ services:
       # value as the password.
       - key: AUTH_TOKEN
         generateValue: true
-      # The mount below, named explicitly so the two cannot drift.
+      # The app's writable directory. With a disk attached it is the mount;
+      # without one it is the container's own storage, recreated empty
+      # whenever the instance is replaced.
       - key: DATA_DIR
         value: /var/data
       - key: SERPAPI_CACHE_DIR
@@ -42,7 +51,8 @@ services:
         value: fixtures
       - key: LLM_PROVIDER
         value: fixture
-      # Flat and predictable on a shared CPU; raise it on a larger plan.
+      # Flat and predictable wherever the CPU is small; raise it on a larger
+      # plan.
       - key: AUDIT_CONCURRENCY
         value: '1'
       # Asked for on first deploy, blank is a supported state (the Settings
@@ -55,12 +65,11 @@ services:
         sync: false
       - key: SENDER_PORTFOLIO_URL
         sync: false
-    # The database, reports and the SerpApi response cache live here. Disks
-    # need a paid plan; to try the free plan instead, remove this block and
-    # accept that the data resets on every deploy and restart. A service with
-    # a disk cannot be scaled, which is the correct shape: runs live in the
-    # process that started them and SQLite is a single writer.
-    disk:
-      name: localscout-data
-      mountPath: /var/data
-      sizeGB: 1
+    # Uncomment for a database that survives deploys, and set `plan` to a paid
+    # size above. A disk needs a paid plan and pins the service to one
+    # instance, which is the correct shape: runs live in the process that
+    # started them and SQLite is a single writer.
+    # disk:
+    #   name: localscout-data
+    #   mountPath: /var/data
+    #   sizeGB: 1

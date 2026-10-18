@@ -15,14 +15,17 @@ now works. Plus an opt-in way to run the whole app on a container host.
 
 - **Deploy.** A `Dockerfile` and a `render.yaml` blueprint run the same app as
   one container service: the API serves the built interface (`SERVE_WEB`),
-  SQLite lives on a mounted disk, and Chromium is in the image so audits
-  measure instead of degrading to `stale`. A bind beyond loopback now requires
-  `AUTH_TOKEN` — short tokens are refused and the loader will not boot a
-  network-reachable API without one — and the token gates every route except
-  `/api/health`, which platform health checks need. [docs/DEPLOY.md](docs/DEPLOY.md)
-  is the walkthrough; [ADR-0004](docs/adr/0004-cloud-deploy-carve-out.md) records
-  why serverless hosts cannot run the API and what the carve-out costs. The
-  local default is unchanged.
+  SQLite lives under `DATA_DIR`, and Chromium is in the image so audits measure
+  instead of degrading to `stale`. The blueprint defaults to Render's free
+  plan, so the first deploy needs no payment method; on free the database
+  resets with the instance, and persistence is a paid plan plus a disk, one
+  comment away in the file. A bind beyond loopback requires `AUTH_TOKEN` —
+  short tokens are refused and the loader will not boot a network-reachable API
+  without one — and the token gates every route except `/api/health`, which
+  platform health checks need. [docs/DEPLOY.md](docs/DEPLOY.md) is the
+  walkthrough; [ADR-0004](docs/adr/0004-cloud-deploy-carve-out.md) records why
+  serverless hosts cannot run the API and what the carve-out costs. The local
+  default is unchanged.
 - **Stop a search.** `POST /api/runs/:id/cancel` and a button on the runs screen.
   Cancellation is cooperative: the audit already in flight finishes and stays on
   the record, and nothing after it starts. A lead the run stopped before reaching

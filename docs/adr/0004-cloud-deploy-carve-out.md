@@ -31,9 +31,12 @@ away:
    config loader refuses a non-loopback `HOST` without `AUTH_TOKEN`, and a
    token shorter than 16 characters is refused everywhere. The token gates
    every route except `/api/health`.
-3. **One instance, one disk.** The database, reports and the SerpApi cache
-   live on a mounted volume. A service with a disk cannot scale, which matches
-   reality: runs live in their process and SQLite is a single writer.
+3. **One instance, a disk for persistence.** Runs live in their process and
+   SQLite is a single writer, so scaling is refused rather than pretended; a
+   disk pins the service to one instance anyway. The blueprint defaults to
+   Render's free plan — no payment method — where the database lives on the
+   container's filesystem and resets with the instance. The persistent shape
+   (paid plan, disk) is one comment away in the same file.
 4. **The image is the deployable unit** (`Dockerfile`), with Chromium so audits
    measure rather than degrade to `stale`, and Render gets a blueprint
    (`render.yaml`) as the reference platform. `docs/DEPLOY.md` is the
@@ -75,8 +78,12 @@ away:
 - `/api/health` is intentionally public — a platform health checker cannot
   sign in — so key-presence booleans and the database path are visible to
   anyone with the URL.
-- Lighthouse on a 0.5 CPU instance is slow; the blueprint comments say so
-  rather than hiding it.
+- Free is a trial shape: no disk, so the database resets on every deploy,
+  restart and idle spin-down, and no shell, so it cannot be retrieved before
+  it does. The blueprint says so where it matters rather than letting someone
+  lose leads quietly.
+- Lighthouse is CPU-bound: slow on a 0.5 CPU install, impractical on free's
+  0.1. The blueprint comments say which plan is for what.
 
 ### Neutral
 
@@ -102,5 +109,7 @@ away:
   says to watch the build log if it fails.
 - Platform facts were read from current documentation rather than recalled:
   Render's blueprint spec (field names such as `autoDeployTrigger`, `plan`
-  IDs, `disk`, `healthCheckPath`, `generateValue`) and the note that disks
-  require a paid plan.
+  IDs, `disk`, `healthCheckPath`, `generateValue`), the note that disks
+  require a paid plan, and the free-tier page (0.1 CPU, fifteen-minute idle
+  spin-down, filesystem reset on redeploy/restart/spin-down, no shell) before
+  the blueprint default changed to free.
