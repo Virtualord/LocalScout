@@ -1,0 +1,66 @@
+# The Render blueprint for the single-service deploy: one Docker web service
+# that serves the API, the interface and the audits, with the SQLite database
+# on a persistent disk. Local development never reads this file.
+#
+# Setup: push this repository to a Git host, then in Render choose
+# Blueprints -> New Blueprint Instance and pick the repository. The values
+# marked `sync: false` are asked for once; everything else is a default that
+# matches the app's design. docs/DEPLOY.md has the walkthrough and the
+# reasoning.
+
+services:
+  - type: web
+    name: localscout
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore # Closest Render region to India; change to suit.
+    # 0.5 CPU is enough to run the app; Lighthouse is CPU-bound, so a batch of
+    # audits takes minutes. The next size up (1c-2g) roughly halves that.
+    plan: 0.5c-512mb
+    # Deploy on every push to the connected branch. `checksPass` is the other
+    # honest option once the host runs this repo's CI; `off` deploys only from
+    # the dashboard button.
+    autoDeployTrigger: commit
+    # Exempt from the token on purpose: a platform health check cannot sign in.
+    healthCheckPath: /api/health
+    envVars:
+      # The login for the deployed app. Render generates it; copy it from the
+      # dashboard. The browser asks once per device: any username, and this
+      # value as the password.
+      - key: AUTH_TOKEN
+        generateValue: true
+      # The mount below, named explicitly so the two cannot drift.
+      - key: DATA_DIR
+        value: /var/data
+      - key: SERPAPI_CACHE_DIR
+        value: /var/data/cache/serpapi
+      # The port Render routes to; the image defaults to the same value.
+      - key: PORT
+        value: '10000'
+      # Start in fixtures mode: no keys, no cost, the whole pipeline walkable.
+      - key: DISCOVERY_MODE
+        value: fixtures
+      - key: LLM_PROVIDER
+        value: fixture
+      # Flat and predictable on a shared CPU; raise it on a larger plan.
+      - key: AUDIT_CONCURRENCY
+        value: '1'
+      # Asked for on first deploy, blank is a supported state (the Settings
+      # screen says what is missing and what it changes). To draft with a
+      # hosted model, also set LLM_PROVIDER=openai-compatible, LLM_BASE_URL,
+      # LLM_MODEL and LLM_API_KEY in the dashboard.
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: SENDER_NAME
+        sync: false
+      - key: SENDER_PORTFOLIO_URL
+        sync: false
+    # The database, reports and the SerpApi response cache live here. Disks
+    # need a paid plan; to try the free plan instead, remove this block and
+    # accept that the data resets on every deploy and restart. A service with
+    # a disk cannot be scaled, which is the correct shape: runs live in the
+    # process that started them and SQLite is a single writer.
+    disk:
+      name: localscout-data
+      mountPath: /var/data
+      sizeGB: 1
