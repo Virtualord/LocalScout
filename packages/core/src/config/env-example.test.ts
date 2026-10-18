@@ -59,12 +59,14 @@ describe('.env.example', () => {
       'PORT',
       'HOST',
       'AUTH_TOKEN',
+      'ALLOW_PUBLIC_ACCESS',
       'SERVE_WEB',
       'WEB_DIST',
       'LOG_LEVEL',
       'SENDER_NAME',
       'SENDER_PORTFOLIO_URL',
       'SENDER_SERVICES',
+      'SCHEDULER_ENABLED',
     ]) {
       expect(env, `.env.example is missing ${key}`).toHaveProperty(key);
     }

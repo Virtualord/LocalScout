@@ -9,6 +9,10 @@
 # the whole app; for leads that persist, switch `plan` and uncomment the disk
 # at the bottom. docs/DEPLOY.md says the same in more words.
 #
+# The service is public: ALLOW_PUBLIC_ACCESS=true, no sign-in. To gate it
+# instead, swap that entry for an AUTH_TOKEN (generateValue: true) — a deploy
+# is gated or public, and both at once is refused.
+#
 # Setup: push this repository to a Git host, then in Render choose
 # Blueprints -> New Blueprint Instance and pick the repository. The values
 # marked `sync: false` are asked for once; everything else is a default that
@@ -31,11 +35,14 @@ services:
     # Exempt from the token on purpose: a platform health check cannot sign in.
     healthCheckPath: /api/health
     envVars:
-      # The login for the deployed app. Render generates it; copy it from the
-      # dashboard. The browser asks once per device: any username, and this
-      # value as the password.
-      - key: AUTH_TOKEN
-        generateValue: true
+      # No sign-in: anyone who can reach the URL can use the app. Suits a
+      # fixtures-mode demo; swap this entry for
+      #   - key: AUTH_TOKEN
+      #     generateValue: true
+      # to gate it instead. AUTH_TOKEN gates every route and asks the browser
+      # once per device (any username, the token as the password).
+      - key: ALLOW_PUBLIC_ACCESS
+        value: 'true'
       # The app's writable directory. With a disk attached it is the mount;
       # without one it is the container's own storage, recreated empty
       # whenever the instance is replaced.

@@ -6,9 +6,10 @@
 # Chromium is present, so audits produce real numbers instead of degrading to
 # stale, and DATA_DIR is writable, so the database has a home.
 #
-# The platform must provide AUTH_TOKEN (the config loader refuses a
-# network-reachable HOST without one); mounting a disk at /var/data is what
-# makes the database outlive the instance (see render.yaml).
+# The platform must provide AUTH_TOKEN or a deliberate ALLOW_PUBLIC_ACCESS=true
+# (the config loader refuses a network-reachable HOST with neither); mounting
+# a disk at /var/data is what makes the database outlive the instance (see
+# render.yaml).
 
 FROM node:24-bookworm-slim AS build
 
@@ -63,8 +64,9 @@ WORKDIR /app
 COPY --from=build /app /app
 
 # A platform reaches the process over its private network, which is the one
-# place 0.0.0.0 is correct: nothing outside the platform can route to it, the
-# platform terminates TLS, and the loader has already insisted on a token.
+# place 0.0.0.0 is correct: nothing outside the platform can route to it, and
+# the platform terminates TLS. The loader insists that the platform has said
+# how the deploy is reached: an AUTH_TOKEN or a deliberate public flag.
 ENV HOST=0.0.0.0
 ENV SERVE_WEB=true
 ENV DATA_DIR=/var/data

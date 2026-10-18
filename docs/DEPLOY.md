@@ -45,9 +45,11 @@ because it is the one this repository configures.
   it resets whenever the instance is replaced. Delete it either way and you
   start completely fresh, exactly like `./data` locally.
 - **Chromium in the image.** Audits measure instead of degrading to `stale`.
-- **A token in front of everything.** A non-loopback bind is refused without
-  `AUTH_TOKEN`, and the token gates every route except `/api/health`, which
-  platform health checks need and which returns no secret.
+- **One of two named access shapes.** Gated: `AUTH_TOKEN` is required for a
+  non-loopback bind and gates every route except `/api/health`, which platform
+  health checks need and which returns no secret. Public:
+  `ALLOW_PUBLIC_ACCESS=true` serves the app with no sign-in at all; the
+  blueprint ships that shape. Setting both is refused, not resolved.
 
 ## Deploy on Render
 
@@ -62,14 +64,34 @@ because it is the one this repository configures.
 3. **Answer the prompts.** `SERPAPI_API_KEY`, `SENDER_NAME` and
    `SENDER_PORTFOLIO_URL` are asked for once and may be left blank. Everything
    else has a working default; the app starts in fixtures mode.
-4. **Copy the generated token.** Open the service's _Environment_ tab and copy
-   `AUTH_TOKEN`. Render generated it; it is the only way in.
-5. **Open the URL.** Visit `https://<service-name>.onrender.com`. The browser
-   asks you to sign in once: any username, and the `AUTH_TOKEN` value as the
-   password. The same credential covers the interface, the API, and the live
-   progress stream.
+4. **Know your access shape.** The blueprint ships the public shape: the app
+   is simply open, with no sign-in. To gate it again, replace
+   `ALLOW_PUBLIC_ACCESS` with a generated `AUTH_TOKEN` — in the dashboard's
+   _Environment_ tab or in `render.yaml` (see the next section).
+5. **Open the URL.** Visit `https://<service-name>.onrender.com`. Public
+   shape: it is just there. Gated shape: the browser asks you to sign in once
+   — any username, the `AUTH_TOKEN` value as the password — and that
+   credential covers the interface, the API, and the live progress stream.
 6. **Check the Settings screen.** It reads `/api/health` and says what is
    present and what each missing key would change.
+
+### Public or gated
+
+A deployment is one of two shapes, never both:
+
+- **Public** (`ALLOW_PUBLIC_ACCESS=true`): no sign-in. Anyone who knows the URL
+  can browse, start searches and read every draft. That is what the blueprint
+  ships, because a free fixtures-mode instance is a demo — nothing to protect,
+  and nothing that survives a restart anyway.
+- **Gated** (`AUTH_TOKEN`, 16+ characters): one shared secret; any username,
+  the token as the password. The shape to wear the moment the instance holds
+  real leads or a paid SerpApi or LLM key.
+
+A non-loopback host with neither is refused at boot, and so is both at once.
+To switch: edit the service's environment in the Render dashboard and save, or
+change `render.yaml` and sync the blueprint — and delete the old value by
+hand, because Render keeps environment variables a blueprint stops mentioning.
+The loader refuses to boot rather than guess which shape won.
 
 ### Free plan versus paid
 
@@ -127,18 +149,20 @@ real measurements of real sites, that is what `DISCOVERY_MODE=live` is for.
   branch rebuilds and redeploys. Watch the build log for the first deploy: CI
   does not build this image, so the platform's build is the first one.
 - **Logs and failures.** A configuration problem (a bad `HOST`, a short
-  `AUTH_TOKEN`, `SERVE_WEB=true` without a build) fails at boot with a sentence
-  naming the variable, in the deploy log, exactly as it would locally.
+  `AUTH_TOKEN`, both access shapes set at once, `SERVE_WEB=true` without a
+  build) fails at boot with a sentence naming the variable, in the deploy log,
+  exactly as it would locally. A public deploy also says so in the log, every
+  start.
 - **Backups.** On a paid plan the database is one file,
   `/var/data/localscout.db`, on the disk; copy it from the Render shell. On
   free there is no shell and no disk, so the data cannot be retrieved — the
   honest cost of free, and the reason to upgrade once it matters.
-- **Rotating the token.** Change `AUTH_TOKEN` in the dashboard and redeploy;
-  every browser is asked to sign in again.
-- **What a visitor with the URL can see.** Without the token: nothing but a
-  sign-in prompt and `/api/health` (key-presence booleans, active modes, the
-  database path). With it: everything, which is the point — the token is one
-  shared secret, not accounts.
+- **Rotating the token (gated shape).** Change `AUTH_TOKEN` in the dashboard
+  and redeploy; every browser is asked to sign in again.
+- **What a visitor with the URL can see.** Gated: without the token, nothing
+  but a sign-in prompt and `/api/health` (key-presence booleans, active modes,
+  the database path); with it, everything — the token is one shared secret,
+  not accounts. Public: that same everything, to anyone with the URL.
 
 ## Costs, all of them
 
