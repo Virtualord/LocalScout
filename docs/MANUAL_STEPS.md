@@ -174,3 +174,22 @@ git check-ignore -v data config/sender.local.json ref .env
 ```
 
 Every one of those should report that it is ignored.
+
+## 9. Deploy to a container host (optional)
+
+Only if you want an always-on URL. The whole walkthrough, the switch for live
+discovery, and the cost list are in [DEPLOY.md](DEPLOY.md); the shape of it:
+
+```bash
+# 1. Push the repository (step 8 above).
+
+# 2. In the host's dashboard: New > Blueprint, pick this repository.
+#    The repository ships the Dockerfile and render.yaml the blueprint reads.
+
+# 3. Open the deployed URL. The browser asks to sign in once: any username,
+#    and the AUTH_TOKEN the platform generated as the password.
+```
+
+Why the deploy is a single service, why Vercel and other serverless hosts
+cannot run the API, and what the carve-out costs are in
+[ADR-0004](adr/0004-cloud-deploy-carve-out.md).
