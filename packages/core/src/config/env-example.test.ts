@@ -34,6 +34,7 @@ describe('.env.example', () => {
   it('leaves every secret empty', () => {
     expect(env['SERPAPI_API_KEY']).toBe('');
     expect(env['LLM_API_KEY']).toBe('');
+    expect(env['AUTH_TOKEN']).toBe('');
     expect(env['SENDER_NAME']).toBe('');
     expect(env['SENDER_PORTFOLIO_URL']).toBe('');
   });
@@ -55,6 +56,9 @@ describe('.env.example', () => {
       'DEFAULT_COUNTRY',
       'DATA_DIR',
       'API_PORT',
+      'PORT',
+      'HOST',
+      'AUTH_TOKEN',
       'LOG_LEVEL',
       'SENDER_NAME',
       'SENDER_PORTFOLIO_URL',

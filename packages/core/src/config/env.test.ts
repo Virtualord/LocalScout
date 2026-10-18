@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ConfigError, loadConfig, rawEnvSchema } from './env.js';
+import { ConfigError, loadConfig, MIN_AUTH_TOKEN_LENGTH, rawEnvSchema } from './env.js';
 
 /** A clean environment: every optional key absent, every default in place. */
 const cleanEnv = {} as NodeJS.ProcessEnv;
@@ -17,6 +17,8 @@ describe('loadConfig', () => {
     expect(config.audit.timeoutMs).toBe(120_000);
     expect(config.audit.chromePath).toBeUndefined();
     expect(config.app.apiPort).toBe(8787);
+    expect(config.app.host).toBe('127.0.0.1');
+    expect(config.auth.token).toBeUndefined();
     expect(config.app.defaultCountry).toBe('IN');
     expect(config.app.logLevel).toBe('info');
     expect(config.scheduler.enabled).toBe(false);
@@ -67,6 +69,24 @@ describe('loadConfig', () => {
     expect(loadConfig({ SCHEDULER_ENABLED: 'false' } as NodeJS.ProcessEnv).scheduler.enabled).toBe(
       false,
     );
+  });
+
+  it('lets the platform port stand in for API_PORT, with API_PORT winning', () => {
+    expect(loadConfig({ PORT: '10000' } as NodeJS.ProcessEnv).app.apiPort).toBe(10_000);
+    expect(loadConfig({ PORT: '10000', API_PORT: '9000' } as NodeJS.ProcessEnv).app.apiPort).toBe(
+      9000,
+    );
+  });
+
+  it('accepts a non-loopback host once a long-enough token is set', () => {
+    const token = 'a'.repeat(MIN_AUTH_TOKEN_LENGTH);
+    const config = loadConfig({
+      HOST: '0.0.0.0',
+      AUTH_TOKEN: token,
+    } as NodeJS.ProcessEnv);
+
+    expect(config.app.host).toBe('0.0.0.0');
+    expect(config.auth.token).toBe(token);
   });
 
   it('carries the sender profile through', () => {
@@ -144,6 +164,33 @@ describe('loadConfig', () => {
 
     it('rejects an out-of-range port', () => {
       expect(() => loadConfig({ API_PORT: '70000' } as NodeJS.ProcessEnv)).toThrow(/API_PORT/);
+    });
+
+    it('refuses a network-reachable host without a token, and says what to set', () => {
+      try {
+        loadConfig({ HOST: '0.0.0.0' } as NodeJS.ProcessEnv);
+        expect.unreachable('should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigError);
+        const message = (error as ConfigError).message;
+        expect(message).toContain('AUTH_TOKEN');
+        expect(message).toContain('127.0.0.1');
+      }
+    });
+
+    it('refuses a token too short to be a gate', () => {
+      expect(() =>
+        loadConfig({ HOST: '0.0.0.0', AUTH_TOKEN: 'short' } as NodeJS.ProcessEnv),
+      ).toThrow(/at least 16 characters/);
+    });
+
+    it('refuses a HOST that looks like a URL', () => {
+      expect(() =>
+        loadConfig({
+          HOST: 'http://0.0.0.0:8787',
+          AUTH_TOKEN: 'a'.repeat(MIN_AUTH_TOKEN_LENGTH),
+        } as NodeJS.ProcessEnv),
+      ).toThrow(/HOST/);
     });
 
     it('rejects a concurrency above the cap', () => {

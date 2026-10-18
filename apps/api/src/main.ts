@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   const server = await startServer(runtime, app);
   runtime.logger.info({ port: server.port }, 'api.listening');
 
-  process.stdout.write(`\nLocalscout API on http://127.0.0.1:${server.port}\n`);
+  process.stdout.write(`\nLocalscout API on http://${runtime.config.app.host}:${server.port}\n`);
   process.stdout.write(
     `Discovery: ${runtime.config.discovery.mode}, drafts: ${runtime.config.llm.provider}\n`,
   );
@@ -103,7 +103,8 @@ if (isEntrypoint) {
   try {
     await main();
   } catch (error) {
-    const port = Number(process.env['API_PORT'] ?? 8787);
+    const configuredPort = process.env['API_PORT'] || process.env['PORT'];
+    const port = configuredPort ? Number(configuredPort) : 8787;
     process.stderr.write(describeStartupError(error, port));
     process.exitCode = 1;
   }

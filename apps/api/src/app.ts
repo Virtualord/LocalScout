@@ -8,9 +8,10 @@ import type { AppRuntime } from './runtime.js';
 /**
  * The local API server.
  *
- * Bound to 127.0.0.1 only. This is not a network service: it exists so a browser
- * on the same machine can talk to the pipeline, and it should never be reachable
- * from another machine.
+ * Bound to 127.0.0.1 unless HOST says otherwise. This is not a network
+ * service by default: it exists so a browser on the same machine can talk to
+ * the pipeline. A deployment that binds beyond loopback is required by the
+ * config loader to carry an AUTH_TOKEN, and the token gates every route.
  *
  * CORS is restricted to the Vite dev origin, body sizes are capped, and a set of
  * conservative security headers is applied. No endpoint ever returns a secret.
@@ -100,9 +101,12 @@ export function startServer(runtime: AppRuntime, app: Hono): Promise<StartedServ
   const port = runtime.config.app.apiPort;
 
   return new Promise((resolve, reject) => {
-    // 127.0.0.1 explicitly. Never 0.0.0.0: this service must not be reachable
-    // from the network, and the default in some runtimes is every interface.
-    const server = serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
+    /*
+     * The configured bind address, loopback unless a deployment set HOST.
+     * Never widened implicitly: the default in some runtimes is every
+     * interface, and that is what the config loader's token rule exists for.
+     */
+    const server = serve({ fetch: app.fetch, port, hostname: runtime.config.app.host }, (info) => {
       resolve({
         port: info.port,
         close: () =>
