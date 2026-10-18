@@ -19,6 +19,7 @@ import {
   type Repositories,
   type SenderProfile,
 } from '@localscout/core';
+import { resolveWebDist } from './web.js';
 
 /**
  * Application wiring.
@@ -43,6 +44,8 @@ export interface AppRuntime {
   databaseUrl: string;
   /** Absolute path to the directory holding Lighthouse reports. */
   reportDir: string;
+  /** Absolute path to the web build to serve, when SERVE_WEB is on. */
+  webDist: string | undefined;
   close(): void;
 }
 
@@ -215,6 +218,7 @@ export function boot(env: NodeJS.ProcessEnv = process.env, options: BootOptions 
     sender,
     databaseUrl,
     reportDir: join(config.app.dataDir, 'reports'),
+    webDist: resolveWebDist(config),
     close: () => db.close(),
   };
 }

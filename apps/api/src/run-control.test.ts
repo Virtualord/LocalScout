@@ -58,6 +58,7 @@ describe('run control', () => {
       sender: { name: 'Aditya', services: 'websites' },
       databaseUrl: url,
       reportDir: join(dir, 'reports'),
+      webDist: undefined,
       close: () => handle.close(),
     };
   });

@@ -1,0 +1,27 @@
+# What must never enter the image.
+#
+# .env is the important one: an image is pushed to a registry, and a laptop's
+# secrets must not ride along. A deployment gets its configuration from the
+# platform's environment variables, never from a copied file.
+
+.git
+.github
+.husky
+.vscode
+
+node_modules
+dist
+
+data
+coverage
+/[Rr]ef*
+config/sender.local.json
+
+.env
+.env.*
+*.log
+
+eval/results
+test-results
+playwright-report
+blob-report

@@ -55,7 +55,35 @@ const rawEnvSchema = z.object({
   // App
   DEFAULT_COUNTRY: z.string().length(2).default('IN'),
   DATA_DIR: z.string().default('./data'),
-  API_PORT: optionalPort.pipe(z.number().int().min(1).max(65_535).default(8787)),
+  API_PORT: optionalPort.pipe(z.number().int().min(1).max(65_535).optional()),
+  // Container platforms (Render, Railway, Fly) assign the port through PORT.
+  // API_PORT is the local setting and wins when both are present.
+  PORT: optionalPort.pipe(z.number().int().min(1).max(65_535).optional()),
+  /*
+   * Loopback by default, always. Binding anything else is what turns this from
+   * a private tool into a network service, so it is opt-in and gated: the
+   * cross-field rules below refuse a non-loopback HOST without an AUTH_TOKEN.
+   */
+  HOST: z
+    .string()
+    .default('127.0.0.1')
+    .refine((v) => v !== '' && !/[\s/]/.test(v), {
+      message: 'HOST must be an address like 127.0.0.1 or 0.0.0.0, not a URL or path.',
+    }),
+  // Required beyond loopback: every route is gated behind it. 16+ characters.
+  AUTH_TOKEN: optionalString,
+  /*
+   * Serve the built web interface from the API itself, so a deployment is one
+   * origin and one process: no CORS between halves, no second server, and SSE
+   * streams same-origin. Requires `pnpm build` to have produced the dist
+   * directory; WEB_DIST overrides where that is looked for (tests, odd
+   * layouts). Off by default — locally the Vite dev server owns the interface.
+   */
+  SERVE_WEB: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  WEB_DIST: optionalString,
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
   // Sender profile (env fallback; the Settings screen writes config/sender.local.json)
@@ -94,7 +122,20 @@ export interface AppConfig {
     defaultCountry: string;
     dataDir: string;
     apiPort: number;
+    /** The interface the API binds. Loopback unless deployment says otherwise. */
+    host: string;
+    /** Serve the built web interface from this process. */
+    serveWeb: boolean;
+    /** Where the web build lives, when set. Resolved by the API at boot. */
+    webDist: string | undefined;
     logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
+  };
+  auth: {
+    /**
+     * Gates every route when set. Required whenever {@link AppConfig.app.host}
+     * is not loopback: the config loader refuses any other combination.
+     */
+    token: string | undefined;
   };
   sender: {
     name: string | undefined;
@@ -128,6 +169,18 @@ function formatIssues(error: z.ZodError): { path: string; message: string }[] {
 }
 
 /**
+ * Loopback literals. `localhost` is included because on every platform this
+ * project supports it resolves to the machine itself; anything else — 0.0.0.0,
+ * a LAN address, a hostname — means other machines can reach the API.
+ */
+function isLoopbackHost(host: string): boolean {
+  return host === 'localhost' || host === '::1' || host.startsWith('127.');
+}
+
+/** A deploy token shorter than this is not a gate worth having. */
+export const MIN_AUTH_TOKEN_LENGTH = 16;
+
+/**
  * Cross-field rules that a per-field schema cannot express.
  *
  * These are the failures a first-time user actually hits, so each one names the
@@ -135,6 +188,26 @@ function formatIssues(error: z.ZodError): { path: string; message: string }[] {
  */
 function checkCrossFieldRules(env: RawEnv): { path: string; message: string }[] {
   const issues: { path: string; message: string }[] = [];
+
+  if (env.AUTH_TOKEN !== undefined && env.AUTH_TOKEN.length < MIN_AUTH_TOKEN_LENGTH) {
+    issues.push({
+      path: 'AUTH_TOKEN',
+      message: `AUTH_TOKEN must be at least ${MIN_AUTH_TOKEN_LENGTH} characters (got ${env.AUTH_TOKEN.length}). Generate one with: openssl rand -hex 32`,
+    });
+  }
+
+  /*
+   * The safety rule this project cannot default away: a network-reachable API
+   * without a token is an open door. There is no authenticated data and no
+   * per-user accounts by design, so the only honest options are loopback or a
+   * token; refusing to boot is better than quietly serving the network.
+   */
+  if (!isLoopbackHost(env.HOST) && env.AUTH_TOKEN === undefined) {
+    issues.push({
+      path: 'HOST',
+      message: `HOST=${env.HOST} would make the API reachable from other machines, and there is no AUTH_TOKEN to gate it. Set AUTH_TOKEN (openssl rand -hex 32), or leave HOST unset to bind 127.0.0.1.`,
+    });
+  }
 
   if (env.DISCOVERY_MODE === 'live' && !env.SERPAPI_API_KEY) {
     issues.push({
@@ -221,9 +294,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     app: {
       defaultCountry: data.DEFAULT_COUNTRY.toUpperCase(),
       dataDir: data.DATA_DIR,
-      apiPort: data.API_PORT,
+      apiPort: data.API_PORT ?? data.PORT ?? 8787,
+      host: data.HOST,
+      serveWeb: data.SERVE_WEB,
+      webDist: data.WEB_DIST,
       logLevel: data.LOG_LEVEL,
     },
+    auth: { token: data.AUTH_TOKEN },
     sender: {
       name: data.SENDER_NAME,
       portfolioUrl: data.SENDER_PORTFOLIO_URL,

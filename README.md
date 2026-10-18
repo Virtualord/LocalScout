@@ -109,9 +109,11 @@ Read these before trusting a number.
 - **One site per listing.** If a listing has no website, or only a social page,
   it is reported as `NO_WEBSITE`. Localscout does not crawl a business's other
   properties, and it does not treat a Facebook page as a website to audit.
-- **Local only, by design.** There is no remote, no cloud database, no
-  telemetry, and no account. The trade-off is that it does not sync between
-  machines.
+- **Local by default, deployable by choice.** There is no account, no cloud
+  database, and no telemetry. The trade-off is that it does not sync between
+  machines. An opt-in single-service deploy ([docs/DEPLOY.md](docs/DEPLOY.md),
+  [ADR-0004](docs/adr/0004-cloud-deploy-carve-out.md)) covers the always-on-URL
+  case, and says exactly what moves where.
 - **Chrome is optional.** Without it, audits run their HTTP and HTML checks only
   and report `stale`. That is most of the value; performance numbers are not.
 - **A small local model will sometimes drift.** Measured on `gemma3:4b`:
@@ -129,7 +131,8 @@ Read these before trusting a number.
 | Document                                             | What is in it                                               |
 | ---------------------------------------------------- | ----------------------------------------------------------- |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)         | How the pieces fit, and the three contracts that shape them |
-| [docs/MANUAL_STEPS.md](docs/MANUAL_STEPS.md)         | The eight things only a person can do, with exact commands  |
+| [docs/MANUAL_STEPS.md](docs/MANUAL_STEPS.md)         | The nine things only a person can do, with exact commands   |
+| [docs/DEPLOY.md](docs/DEPLOY.md)                     | Running the same app on a container host, and what it costs |
 | [docs/WRITEUP_NOTES.md](docs/WRITEUP_NOTES.md)       | Real measurements, and where they are thin                  |
 | [docs/DESIGN_REFERENCE.md](docs/DESIGN_REFERENCE.md) | Which design effects are observed and which are inferred    |
 | [docs/adr/](docs/adr/)                               | Decisions with a tradeoff worth remembering                 |

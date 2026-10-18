@@ -17,6 +17,11 @@ Browser (React)  --HTTP/SSE-->  API (127.0.0.1:8787)
 Everything runs on one machine. The server binds to `127.0.0.1`, the database is
 a file, and the only network calls are the ones the user explicitly configured.
 
+A single opt-in deploy path runs this same process on a container host, with
+the interface served by the API itself and a token in front of every route; the
+default is unchanged. See [DEPLOY.md](DEPLOY.md) and
+[ADR-0004](adr/0004-cloud-deploy-carve-out.md).
+
 ## Repository layout
 
 ```
@@ -32,7 +37,9 @@ localscout/
   eval/         run.ts
   fixtures/     serpapi/*.json
   docs/         ARCHITECTURE.md, DESIGN_REFERENCE.md, MANUAL_STEPS.md,
-                WRITEUP_NOTES.md, adr/
+                DEPLOY.md, WRITEUP_NOTES.md, adr/
+  Dockerfile    the deployable image (see docs/DEPLOY.md)
+  render.yaml   the reference platform blueprint
 ```
 
 ## The one idea that shapes everything

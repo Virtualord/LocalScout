@@ -3,14 +3,17 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { logger as honoLogger } from 'hono/logger';
+import { registerDeployTokenAuth } from './auth.js';
+import { indexDocument, registerWebStatic } from './web.js';
 import type { AppRuntime } from './runtime.js';
 
 /**
  * The local API server.
  *
- * Bound to 127.0.0.1 only. This is not a network service: it exists so a browser
- * on the same machine can talk to the pipeline, and it should never be reachable
- * from another machine.
+ * Bound to 127.0.0.1 unless HOST says otherwise. This is not a network
+ * service by default: it exists so a browser on the same machine can talk to
+ * the pipeline. A deployment that binds beyond loopback is required by the
+ * config loader to carry an AUTH_TOKEN, and the token gates every route.
  *
  * CORS is restricted to the Vite dev origin, body sizes are capped, and a set of
  * conservative security headers is applied. No endpoint ever returns a secret.
@@ -32,6 +35,10 @@ export function createApp(runtime: AppRuntime): Hono {
     }),
   );
 
+  // Before every route and before the body is read: an unauthenticated caller
+  // should not reach any handler, or spend any of this process's memory.
+  registerDeployTokenAuth(app, runtime);
+
   // Conservative headers. This serves JSON and static assets to one browser on
   // localhost, so there is no reason to relax any of these.
   app.use('*', async (c, next) => {
@@ -47,7 +54,13 @@ export function createApp(runtime: AppRuntime): Hono {
       'Content-Security-Policy',
       "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' http://localhost:8787 http://127.0.0.1:8787 ws://localhost:5173 ws://127.0.0.1:5173; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     );
-    c.header('Cache-Control', 'no-store');
+    /*
+     * API answers are never cached: a run's progress or a lead's status is
+     * stale the moment it is stored. Static assets carry their own policy and
+     * must keep it — including the immutable hashed bundles — so this header
+     * is set for /api only.
+     */
+    if (c.req.path.startsWith('/api')) c.header('Cache-Control', 'no-store');
   });
 
   /*
@@ -70,16 +83,45 @@ export function createApp(runtime: AppRuntime): Hono {
 
   app.use('*', honoLogger());
 
-  app.get('/', (c) =>
-    c.json({
-      name: 'Localscout API',
-      note: 'Local API. The interface is on http://localhost:5173.',
-    }),
-  );
+  /*
+   * The built interface, when a deployment serves it. Registered before the
+   * routes so a request for a real file never walks the whole router, and every
+   * handler falls through on a miss, so `/api/*` still reaches the routes
+   * registered after this function returns.
+   */
+  if (runtime.webDist !== undefined) {
+    registerWebStatic(app, runtime.webDist);
+  }
 
-  // Routes are registered by the caller so this module stays free of imports
-  // that would create a cycle with the workflow.
-  app.notFound((c) => c.json({ error: `No route for ${c.req.method} ${c.req.path}.` }, 404));
+  if (runtime.webDist === undefined) {
+    app.get('/', (c) =>
+      c.json({
+        name: 'Localscout API',
+        note: 'Local API. The interface is on http://localhost:5173.',
+      }),
+    );
+  }
+
+  /*
+   * Routes are registered by the caller so this module stays free of imports
+   * that would create a cycle with the workflow.
+   *
+   * The SPA fallback is expressed here, in notFound, rather than as a `*`
+   * route: a wildcard route registered now would be matched before every route
+   * the caller registers later, and swallow all of them. The document is only
+   * served to a request that asked for HTML — a missing image or script gets
+   * the honest 404 instead of an HTML page with the wrong content type.
+   */
+  const serveIndex = runtime.webDist !== undefined ? indexDocument(runtime.webDist) : undefined;
+  app.notFound(async (c) => {
+    const wantsHtml =
+      c.req.method === 'GET' && (c.req.header('accept') ?? '').includes('text/html');
+    if (serveIndex !== undefined && wantsHtml && !c.req.path.startsWith('/api')) {
+      const response = await serveIndex(c, async () => {});
+      if (response !== undefined) return response;
+    }
+    return c.json({ error: `No route for ${c.req.method} ${c.req.path}.` }, 404);
+  });
 
   app.onError((error, c) => {
     runtime.logger.error({ err: error, path: c.req.path }, 'api.unhandled_error');
@@ -100,9 +142,12 @@ export function startServer(runtime: AppRuntime, app: Hono): Promise<StartedServ
   const port = runtime.config.app.apiPort;
 
   return new Promise((resolve, reject) => {
-    // 127.0.0.1 explicitly. Never 0.0.0.0: this service must not be reachable
-    // from the network, and the default in some runtimes is every interface.
-    const server = serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
+    /*
+     * The configured bind address, loopback unless a deployment set HOST.
+     * Never widened implicitly: the default in some runtimes is every
+     * interface, and that is what the config loader's token rule exists for.
+     */
+    const server = serve({ fetch: app.fetch, port, hostname: runtime.config.app.host }, (info) => {
       resolve({
         port: info.port,
         close: () =>
