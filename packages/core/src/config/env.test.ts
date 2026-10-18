@@ -18,6 +18,8 @@ describe('loadConfig', () => {
     expect(config.audit.chromePath).toBeUndefined();
     expect(config.app.apiPort).toBe(8787);
     expect(config.app.host).toBe('127.0.0.1');
+    expect(config.app.serveWeb).toBe(false);
+    expect(config.app.webDist).toBeUndefined();
     expect(config.auth.token).toBeUndefined();
     expect(config.app.defaultCountry).toBe('IN');
     expect(config.app.logLevel).toBe('info');
@@ -87,6 +89,16 @@ describe('loadConfig', () => {
 
     expect(config.app.host).toBe('0.0.0.0');
     expect(config.auth.token).toBe(token);
+  });
+
+  it('parses the serve-web flag and an explicit dist path', () => {
+    const config = loadConfig({
+      SERVE_WEB: 'true',
+      WEB_DIST: '/srv/web',
+    } as NodeJS.ProcessEnv);
+
+    expect(config.app.serveWeb).toBe(true);
+    expect(config.app.webDist).toBe('/srv/web');
   });
 
   it('carries the sender profile through', () => {

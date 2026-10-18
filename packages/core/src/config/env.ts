@@ -72,6 +72,18 @@ const rawEnvSchema = z.object({
     }),
   // Required beyond loopback: every route is gated behind it. 16+ characters.
   AUTH_TOKEN: optionalString,
+  /*
+   * Serve the built web interface from the API itself, so a deployment is one
+   * origin and one process: no CORS between halves, no second server, and SSE
+   * streams same-origin. Requires `pnpm build` to have produced the dist
+   * directory; WEB_DIST overrides where that is looked for (tests, odd
+   * layouts). Off by default — locally the Vite dev server owns the interface.
+   */
+  SERVE_WEB: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  WEB_DIST: optionalString,
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
   // Sender profile (env fallback; the Settings screen writes config/sender.local.json)
@@ -112,6 +124,10 @@ export interface AppConfig {
     apiPort: number;
     /** The interface the API binds. Loopback unless deployment says otherwise. */
     host: string;
+    /** Serve the built web interface from this process. */
+    serveWeb: boolean;
+    /** Where the web build lives, when set. Resolved by the API at boot. */
+    webDist: string | undefined;
     logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
   };
   auth: {
@@ -280,6 +296,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       dataDir: data.DATA_DIR,
       apiPort: data.API_PORT ?? data.PORT ?? 8787,
       host: data.HOST,
+      serveWeb: data.SERVE_WEB,
+      webDist: data.WEB_DIST,
       logLevel: data.LOG_LEVEL,
     },
     auth: { token: data.AUTH_TOKEN },

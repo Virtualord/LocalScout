@@ -56,6 +56,7 @@ describe('api', () => {
       sender: { name: 'Aditya', portfolioUrl: 'https://aditya.example/', services: 'websites' },
       databaseUrl: url,
       reportDir: join(dir, 'reports'),
+      webDist: undefined,
       close: () => handle.close(),
     };
 
