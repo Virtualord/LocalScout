@@ -21,6 +21,7 @@ describe('loadConfig', () => {
     expect(config.app.serveWeb).toBe(false);
     expect(config.app.webDist).toBeUndefined();
     expect(config.auth.token).toBeUndefined();
+    expect(config.auth.publicAccess).toBe(false);
     expect(config.app.defaultCountry).toBe('IN');
     expect(config.app.logLevel).toBe('info');
     expect(config.scheduler.enabled).toBe(false);
@@ -89,6 +90,18 @@ describe('loadConfig', () => {
 
     expect(config.app.host).toBe('0.0.0.0');
     expect(config.auth.token).toBe(token);
+    expect(config.auth.publicAccess).toBe(false);
+  });
+
+  it('serves a non-loopback host openly when the public flag names the choice', () => {
+    const config = loadConfig({
+      HOST: '0.0.0.0',
+      ALLOW_PUBLIC_ACCESS: 'true',
+    } as NodeJS.ProcessEnv);
+
+    expect(config.app.host).toBe('0.0.0.0');
+    expect(config.auth.publicAccess).toBe(true);
+    expect(config.auth.token).toBeUndefined();
   });
 
   it('parses the serve-web flag and an explicit dist path', () => {
@@ -186,7 +199,24 @@ describe('loadConfig', () => {
         expect(error).toBeInstanceOf(ConfigError);
         const message = (error as ConfigError).message;
         expect(message).toContain('AUTH_TOKEN');
+        expect(message).toContain('ALLOW_PUBLIC_ACCESS');
         expect(message).toContain('127.0.0.1');
+      }
+    });
+
+    it('refuses the public flag and a token together, as two different shapes', () => {
+      try {
+        loadConfig({
+          HOST: '0.0.0.0',
+          AUTH_TOKEN: 'a'.repeat(MIN_AUTH_TOKEN_LENGTH),
+          ALLOW_PUBLIC_ACCESS: 'true',
+        } as NodeJS.ProcessEnv);
+        expect.unreachable('should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigError);
+        const message = (error as ConfigError).message;
+        expect(message).toContain('ALLOW_PUBLIC_ACCESS');
+        expect(message).toContain('AUTH_TOKEN');
       }
     });
 

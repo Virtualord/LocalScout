@@ -59,6 +59,7 @@ describe('.env.example', () => {
       'PORT',
       'HOST',
       'AUTH_TOKEN',
+      'ALLOW_PUBLIC_ACCESS',
       'SERVE_WEB',
       'WEB_DIST',
       'LOG_LEVEL',

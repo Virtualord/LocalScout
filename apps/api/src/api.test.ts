@@ -138,7 +138,7 @@ describe('api', () => {
     function guardedApp(): ReturnType<typeof createApp> {
       const guardedRuntime: AppRuntime = {
         ...runtime,
-        config: { ...runtime.config, auth: { token } },
+        config: { ...runtime.config, auth: { token, publicAccess: false } },
       };
       const guarded = createApp(guardedRuntime);
       registerHealthRoutes(guarded, guardedRuntime);

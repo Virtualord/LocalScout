@@ -61,8 +61,9 @@ const rawEnvSchema = z.object({
   PORT: optionalPort.pipe(z.number().int().min(1).max(65_535).optional()),
   /*
    * Loopback by default, always. Binding anything else is what turns this from
-   * a private tool into a network service, so it is opt-in and gated: the
-   * cross-field rules below refuse a non-loopback HOST without an AUTH_TOKEN.
+   * a private tool into a network service, so it is opt-in and named: the
+   * cross-field rules below refuse a non-loopback HOST unless it carries an
+   * AUTH_TOKEN or an explicit ALLOW_PUBLIC_ACCESS=true.
    */
   HOST: z
     .string()
@@ -72,6 +73,16 @@ const rawEnvSchema = z.object({
     }),
   // Required beyond loopback: every route is gated behind it. 16+ characters.
   AUTH_TOKEN: optionalString,
+  /*
+   * The other deliberate shape: no sign-in at all. It satisfies the rule below
+   * in AUTH_TOKEN's place, and the two are refused together — a deploy is
+   * gated or public, never both. For deployments that are meant to be public
+   * (a demo); anyone who can reach one can use it.
+   */
+  ALLOW_PUBLIC_ACCESS: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   /*
    * Serve the built web interface from the API itself, so a deployment is one
    * origin and one process: no CORS between halves, no second server, and SSE
@@ -133,9 +144,15 @@ export interface AppConfig {
   auth: {
     /**
      * Gates every route when set. Required whenever {@link AppConfig.app.host}
-     * is not loopback: the config loader refuses any other combination.
+     * is not loopback unless {@link AppConfig.auth.publicAccess} names the
+     * deploy as public; the loader refuses the two together.
      */
     token: string | undefined;
+    /**
+     * The deploy says it wants to be public: no sign-in at all. Only ever
+     * true when `ALLOW_PUBLIC_ACCESS=true` was set deliberately.
+     */
+    publicAccess: boolean;
   };
   sender: {
     name: string | undefined;
@@ -198,14 +215,28 @@ function checkCrossFieldRules(env: RawEnv): { path: string; message: string }[] 
 
   /*
    * The safety rule this project cannot default away: a network-reachable API
-   * without a token is an open door. There is no authenticated data and no
-   * per-user accounts by design, so the only honest options are loopback or a
-   * token; refusing to boot is better than quietly serving the network.
+   * with neither a token nor a named decision to be public is an open door by
+   * accident. There is no authenticated data and no per-user accounts by
+   * design, so the honest options are loopback, a token, or ALLOW_PUBLIC_ACCESS
+   * set on purpose; refusing to boot is better than quietly serving the
+   * network.
    */
-  if (!isLoopbackHost(env.HOST) && env.AUTH_TOKEN === undefined) {
+  if (!isLoopbackHost(env.HOST) && env.AUTH_TOKEN === undefined && !env.ALLOW_PUBLIC_ACCESS) {
     issues.push({
       path: 'HOST',
-      message: `HOST=${env.HOST} would make the API reachable from other machines, and there is no AUTH_TOKEN to gate it. Set AUTH_TOKEN (openssl rand -hex 32), or leave HOST unset to bind 127.0.0.1.`,
+      message: `HOST=${env.HOST} would make the API reachable from other machines, and neither AUTH_TOKEN nor ALLOW_PUBLIC_ACCESS is set. Set AUTH_TOKEN (openssl rand -hex 32), leave HOST unset to bind 127.0.0.1, or set ALLOW_PUBLIC_ACCESS=true to serve it openly, with no sign-in.`,
+    });
+  }
+
+  /*
+   * Gated and public are different shapes, and running both would mean one of
+   * them silently losing. Named contradiction, named fix.
+   */
+  if (env.ALLOW_PUBLIC_ACCESS && env.AUTH_TOKEN !== undefined) {
+    issues.push({
+      path: 'ALLOW_PUBLIC_ACCESS',
+      message:
+        'ALLOW_PUBLIC_ACCESS=true and AUTH_TOKEN are two different deploy shapes — public with no sign-in, or gated — and only one can be set. Remove AUTH_TOKEN, or remove ALLOW_PUBLIC_ACCESS to keep the gate.',
     });
   }
 
@@ -300,7 +331,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       webDist: data.WEB_DIST,
       logLevel: data.LOG_LEVEL,
     },
-    auth: { token: data.AUTH_TOKEN },
+    auth: { token: data.AUTH_TOKEN, publicAccess: data.ALLOW_PUBLIC_ACCESS },
     sender: {
       name: data.SENDER_NAME,
       portfolioUrl: data.SENDER_PORTFOLIO_URL,
