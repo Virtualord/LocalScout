@@ -66,6 +66,7 @@ describe('.env.example', () => {
       'SENDER_NAME',
       'SENDER_PORTFOLIO_URL',
       'SENDER_SERVICES',
+      'SCHEDULER_ENABLED',
     ]) {
       expect(env, `.env.example is missing ${key}`).toHaveProperty(key);
     }
