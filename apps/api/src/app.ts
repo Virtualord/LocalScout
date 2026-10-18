@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { logger as honoLogger } from 'hono/logger';
+import { registerDeployTokenAuth } from './auth.js';
 import type { AppRuntime } from './runtime.js';
 
 /**
@@ -32,6 +33,10 @@ export function createApp(runtime: AppRuntime): Hono {
       maxAge: 600,
     }),
   );
+
+  // Before every route and before the body is read: an unauthenticated caller
+  // should not reach any handler, or spend any of this process's memory.
+  registerDeployTokenAuth(app, runtime);
 
   // Conservative headers. This serves JSON and static assets to one browser on
   // localhost, so there is no reason to relax any of these.

@@ -8,6 +8,7 @@ import {
   createRepositories,
   FixtureProvider,
   loadConfig,
+  MIN_AUTH_TOKEN_LENGTH,
   openDb,
   runMigrations,
   type Db,
@@ -126,6 +127,60 @@ describe('api', () => {
       const response = await get('/api/nope');
       expect(response.status).toBe(404);
       expect(((await response.json()) as { error: string }).error).toContain('No route');
+    });
+  });
+
+  describe('deploy token', () => {
+    const token = 'a'.repeat(MIN_AUTH_TOKEN_LENGTH);
+
+    /** The same app, configured the way a deployed instance is. */
+    function guardedApp(): ReturnType<typeof createApp> {
+      const guardedRuntime: AppRuntime = {
+        ...runtime,
+        config: { ...runtime.config, auth: { token } },
+      };
+      const guarded = createApp(guardedRuntime);
+      registerHealthRoutes(guarded, guardedRuntime);
+      registerRunRoutes(guarded, guardedRuntime);
+      registerLeadRoutes(guarded, guardedRuntime);
+      return guarded;
+    }
+
+    const guardedGet = (path: string, headers: Record<string, string> = {}) =>
+      guardedApp().fetch(new Request(`http://127.0.0.1${path}`, { headers }));
+
+    it('answers 401 and challenges the browser to sign in', async () => {
+      const response = await guardedGet('/api/leads');
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get('www-authenticate')).toContain('Basic');
+      expect(((await response.json()) as { error: string }).error).toContain('AUTH_TOKEN');
+    });
+
+    it('accepts the token as a bearer', async () => {
+      const response = await guardedGet('/api/leads', { authorization: `Bearer ${token}` });
+      expect(response.status).toBe(200);
+    });
+
+    it('accepts the token as a Basic password, whatever the username is', async () => {
+      const password = Buffer.from(`anyone:${token}`).toString('base64');
+      const response = await guardedGet('/api/leads', { authorization: `Basic ${password}` });
+      expect(response.status).toBe(200);
+    });
+
+    it('rejects a wrong token in either form', async () => {
+      const bearer = await guardedGet('/api/leads', { authorization: 'Bearer nope' });
+      expect(bearer.status).toBe(401);
+
+      const basic = await guardedGet('/api/leads', {
+        authorization: `Basic ${Buffer.from('anyone:nope').toString('base64')}`,
+      });
+      expect(basic.status).toBe(401);
+    });
+
+    it('leaves /api/health open, because a health checker cannot sign in', async () => {
+      const response = await guardedGet('/api/health');
+      expect(response.status).toBe(200);
     });
   });
 
