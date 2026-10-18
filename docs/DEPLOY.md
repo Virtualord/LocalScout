@@ -2,17 +2,17 @@
 
 Localscout is local-first: `pnpm dev` on one machine is the intended way to run
 it, and nothing here changes that default. This document is the opt-in second
-way — the same app on a container host, at a personal URL — for when an
-always-on address matters more than keeping every byte on your own disk.
+way — the same app on a container host, at a personal URL — for when a
+reachable address matters more than keeping every byte on your own disk.
 [ADR-0004](adr/0004-cloud-deploy-carve-out.md) records why the carve-out looks
 the way it does and what it costs.
 
 ## What runs where
 
-| Piece                                                     | Host                                                                   |
-| --------------------------------------------------------- | ---------------------------------------------------------------------- |
-| API, runs, SQLite, Lighthouse, the built interface        | One container service with a persistent disk (Render is the reference) |
-| A static-only host (Vercel, Netlify) for the interface UI | Not supported as a deploy shape — see below                            |
+| Piece                                                     | Host                                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------- |
+| API, runs, SQLite, Lighthouse, the built interface        | One container service; a disk makes its database persistent |
+| A static-only host (Vercel, Netlify) for the interface UI | Not supported as a deploy shape — see below                 |
 
 **Why not Vercel (or any serverless host) for the API.** This is a shape
 problem, not a config problem:
@@ -25,24 +25,25 @@ problem, not a config problem:
   are request-scoped with timeout ceilings and no place to keep run state.
 
 Hosting just the interface statically is possible in principle, but the API
-still needs a container host with a disk, and splitting the two would add CORS
+still needs a container host, and splitting the two would add CORS
 between the halves and auth on the SSE stream — for a single-user tool, that is
 two deployments and new failure modes for no gain. This repository ships the
 single-service shape instead.
 
-Any platform that runs a Dockerfile with a mounted volume works the same way:
-Fly.io, Railway, or a VPS with Docker and a TLS reverse proxy in front. The
-blueprint and walkthrough below use Render because it is the one this
-repository configures.
+Any platform that runs the Dockerfile works the same way — Fly.io, Railway, or
+a VPS with Docker and a TLS reverse proxy in front; attach a volume there when
+the database must survive. The blueprint and walkthrough below use Render
+because it is the one this repository configures.
 
 ## What the deploy includes
 
 - **The API and the interface in one origin.** `SERVE_WEB=true` makes the API
   serve the built React app, so the browser sees a single origin and the SSE
   progress stream needs no cross-origin negotiation.
-- **The database on the host's disk.** `DATA_DIR` points at the mounted
-  volume; delete it and you start completely fresh, exactly like `./data`
-  locally.
+- **The database on the host's filesystem.** `DATA_DIR` points at `/var/data`
+  — a mounted disk on a paid plan, the container's own storage on free, where
+  it resets whenever the instance is replaced. Delete it either way and you
+  start completely fresh, exactly like `./data` locally.
 - **Chromium in the image.** Audits measure instead of degrading to `stale`.
 - **A token in front of everything.** A non-loopback bind is refused without
   `AUTH_TOKEN`, and the token gates every route except `/api/health`, which
@@ -54,8 +55,10 @@ repository configures.
    [MANUAL_STEPS.md](MANUAL_STEPS.md), step 8).
 2. **Create the service from the blueprint.** In the Render dashboard choose
    _New → Blueprint_, pick the repository, and apply. Render reads
-   [`render.yaml`](../render.yaml): one Docker web service, a 1 GB disk at
-   `/var/data`, and the environment variables the app expects.
+   [`render.yaml`](../render.yaml): one Docker web service on the free plan —
+   no payment method needed — plus the environment variables the app expects.
+   Persistence (a paid plan and a disk) stays commented in the file, marked
+   with what to change.
 3. **Answer the prompts.** `SERPAPI_API_KEY`, `SENDER_NAME` and
    `SENDER_PORTFOLIO_URL` are asked for once and may be left blank. Everything
    else has a working default; the app starts in fixtures mode.
@@ -70,12 +73,27 @@ repository configures.
 
 ### Free plan versus paid
 
-- **Free** has no disks and sleeps after idle periods. The app runs, but the
-  database resets on every deploy and restart. To try it, remove the `disk`
-  block and set `plan: free` in `render.yaml` first.
-- **Paid** (`0.5c-512mb` in the blueprint) keeps the data and stays warm.
-  Lighthouse is CPU-bound: a batch of audits takes minutes on 0.5 CPU, roughly
-  half that on `1c-2g`.
+The blueprint defaults to the **free** plan, so the deploy costs nothing and
+needs no card. Free is a trial shape, not a production one
+([Render's docs](https://render.com/docs/free)):
+
+- **0.1 CPU / 512 MB.** Enough to run the app and walk the whole pipeline in
+  fixtures mode. Lighthouse is CPU-bound, so live audits are not practical
+  here; `0.5c-512mb` is the smallest plan where they are, and `1c-2g` roughly
+  halves their time again.
+- **Sleeps after 15 minutes idle.** The next request takes about a minute to
+  wake it, with a loading page in the browser meanwhile.
+- **The filesystem resets on every deploy, restart and spin-down.** Leads and
+  drafts are gone whenever the instance is replaced, and free has no shell and
+  no disks, so there is nothing to retrieve them to. If the leads start to
+  matter, that is the reason to upgrade.
+- **Usage allowances.** 750 instance hours a month, plus bandwidth and build
+  allowances, all comfortably above one service. Render emails before the
+  limits and, without a payment method, suspends rather than billing.
+
+For a database that survives, edit `render.yaml`: set `plan: 0.5c-512mb` (or
+`1c-2g`), uncomment the `disk` block, push, and let the blueprint sync from
+the dashboard.
 
 ## Turning on the real thing
 
@@ -111,9 +129,10 @@ real measurements of real sites, that is what `DISCOVERY_MODE=live` is for.
 - **Logs and failures.** A configuration problem (a bad `HOST`, a short
   `AUTH_TOKEN`, `SERVE_WEB=true` without a build) fails at boot with a sentence
   naming the variable, in the deploy log, exactly as it would locally.
-- **Backups.** The database is one file, `/var/data/localscout.db`, on the
-  disk. From the Render shell, or a one-off job that mounts the same disk,
-  copy it out; the SerpApi response cache next to it is disposable.
+- **Backups.** On a paid plan the database is one file,
+  `/var/data/localscout.db`, on the disk; copy it from the Render shell. On
+  free there is no shell and no disk, so the data cannot be retrieved — the
+  honest cost of free, and the reason to upgrade once it matters.
 - **Rotating the token.** Change `AUTH_TOKEN` in the dashboard and redeploy;
   every browser is asked to sign in again.
 - **What a visitor with the URL can see.** Without the token: nothing but a
@@ -123,7 +142,8 @@ real measurements of real sites, that is what `DISCOVERY_MODE=live` is for.
 
 ## Costs, all of them
 
-- The Render plan, monthly, whether the app is used or not.
+- Render: nothing on the free plan; a paid plan bills monthly whether the app
+  is used or not.
 - SerpApi searches on the free tier's ~250/month when live discovery is on;
   responses are cached on disk by request hash, so a repeated search is free.
 - The hosted LLM bill, if one is configured; zero in fixtures mode.
@@ -133,5 +153,5 @@ real measurements of real sites, that is what `DISCOVERY_MODE=live` is for.
 Read the build log first — a Dockerfile typo or an apt hiccup is visible
 there. A boot failure prints the same sentence the app prints locally, naming
 the offending variable. A service that deploys but 503s on `/api/health` is
-usually the disk: the database check is the one blocking check, and its fix
-line says to make `DATA_DIR` writable.
+usually `DATA_DIR`: the database check is the one blocking check, and its fix
+line says to make it writable.
