@@ -1,13 +1,14 @@
 # The deployed Localscout: one long-lived process serving the API, the built
-# interface, and Lighthouse audits, with SQLite on a mounted volume.
+# interface, and Lighthouse audits, with SQLite under DATA_DIR.
 #
 # Development does not use this image; `pnpm dev` stays the dev loop. It exists
 # so a container platform can run the same code with the same guarantees:
 # Chromium is present, so audits produce real numbers instead of degrading to
-# stale, and DATA_DIR is a mount, so the database survives a deploy.
+# stale, and DATA_DIR is writable, so the database has a home.
 #
 # The platform must provide AUTH_TOKEN (the config loader refuses a
-# network-reachable HOST without one) and should mount a disk at /var/data.
+# network-reachable HOST without one); mounting a disk at /var/data is what
+# makes the database outlive the instance (see render.yaml).
 
 FROM node:24-bookworm-slim AS build
 
