@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { Header } from '../components/header.js';
+import { Footer } from '../components/sections.js';
 import { RouteLoader } from '../design/decorations.js';
 import { TooltipProvider } from '../components/header.js';
 import { Outlet, ScrollRestoration } from 'react-router';
@@ -31,6 +32,8 @@ export function AppShell() {
           <Outlet />
         </Suspense>
       </main>
+
+      <Footer />
     </div>
   );
 }

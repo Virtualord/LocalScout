@@ -2,16 +2,17 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { NavLink, useLocation } from 'react-router';
 import { useState, type ReactNode } from 'react';
+import { LocationPin } from '../design/decorations.js';
 
 /**
  * Header navigation.
  *
- * The header is sticky, teal, 88px, with a 1px ink rule underneath. It holds a
- * wordmark on the left, mono nav in the middle, and the primary action far
- * right, which is the arrangement from the reference.
+ * The header is sticky and petrol, 88px, with a gold survey rule along its top
+ * edge and a 1px ink rule underneath. It holds a wordmark on the left, mono nav
+ * in the middle, and the primary action far right.
  *
  * Dropdowns open on hover **and** on click. Hover alone would lock out keyboard
- * and touch users; click alone would feel slow for the reference's audience.
+ * and touch users; click alone would feel slow for this audience.
  */
 
 interface NavItem {
@@ -41,13 +42,16 @@ export function Header({ onNewSearch }: { onNewSearch?: () => void }) {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-40 h-[var(--header-height)] border-b border-ink bg-bg">
+    <header className="sticky top-0 z-40 h-[var(--header-height)] border-b border-ink border-t-[3px] border-t-amber bg-bg">
       <div className="container flex h-full items-center justify-between gap-6">
         <NavLink
           to="/"
-          className="display shrink-0 text-2xl text-paper transition-opacity hover:opacity-80"
+          className="display flex shrink-0 items-center gap-2.5 text-2xl text-paper transition-opacity hover:opacity-80"
         >
           Localscout
+          <span className="mt-0.5 text-amber" aria-hidden="true">
+            <LocationPin size={15} />
+          </span>
         </NavLink>
 
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
@@ -60,9 +64,9 @@ export function Header({ onNewSearch }: { onNewSearch?: () => void }) {
                 to={item.to}
                 className={({ isActive }) =>
                   [
-                    'mono px-3 py-2 text-[12px] font-bold uppercase tracking-wider text-paper/85',
+                    'mono px-3 py-2 text-[12px] font-bold uppercase tracking-wider text-paper/80',
                     'transition-colors hover:text-paper',
-                    isActive ? 'nav-active' : '',
+                    isActive ? 'nav-active text-paper' : '',
                   ].join(' ')
                 }
               >
@@ -79,7 +83,7 @@ export function Header({ onNewSearch }: { onNewSearch?: () => void }) {
               <DropdownMenu.Trigger asChild>
                 <button
                   type="button"
-                  className="mono border border-ink px-3 py-2 text-[12px] font-bold uppercase tracking-wider text-paper"
+                  className="mono border border-paper/50 px-3 py-2 text-[12px] font-bold uppercase tracking-wider text-paper"
                 >
                   Menu
                 </button>
@@ -91,7 +95,7 @@ export function Header({ onNewSearch }: { onNewSearch?: () => void }) {
                       <NavLink
                         to={item.to}
                         className={({ isActive }) =>
-                          `nav-panel-item ${isActive ? 'bg-paper/15' : ''}`
+                          `nav-panel-item ${isActive ? 'bg-paper-band' : ''}`
                         }
                       >
                         {item.label}
@@ -103,13 +107,17 @@ export function Header({ onNewSearch }: { onNewSearch?: () => void }) {
             </DropdownMenu.Root>
           </nav>
 
-          <button
-            type="button"
-            onClick={onNewSearch}
-            className="btn btn-primary btn-sm hidden sm:inline-flex"
-          >
-            New search
-          </button>
+          {/*
+            The wrapper carries the responsive visibility, not the button:
+            `.btn` sets `display: inline-flex` in the unlayered stylesheet, and
+            unlayered rules beat Tailwind's layered `hidden` utility, so a
+            `hidden` class on the button itself would never take effect.
+          */}
+          <span className="hidden sm:inline-flex">
+            <button type="button" onClick={onNewSearch} className="btn btn-primary btn-sm">
+              New search
+            </button>
+          </span>
         </div>
       </div>
     </header>
@@ -128,8 +136,8 @@ function NavDropdown({ item, currentPath }: { item: NavItem; currentPath: string
         onPointerEnter={() => setOpen(true)}
         className={[
           'mono flex items-center gap-1 px-3 py-2 text-[12px] font-bold uppercase tracking-wider',
-          'text-paper/85 transition-colors hover:text-paper',
-          containsActive ? 'nav-active' : '',
+          'text-paper/80 transition-colors hover:text-paper',
+          containsActive ? 'nav-active text-paper' : '',
         ].join(' ')}
       >
         <button type="button">
@@ -148,8 +156,8 @@ function NavDropdown({ item, currentPath }: { item: NavItem; currentPath: string
           {(item.children ?? []).map((child) => (
             <DropdownMenu.Item key={child.to} asChild>
               <NavLink to={child.to} className="nav-panel-item block">
-                <span className="mono block text-[13px] font-bold text-paper">{child.label}</span>
-                <span className="mt-0.5 block text-[12px] leading-snug text-paper/55">
+                <span className="mono block text-[13px] font-bold text-ink">{child.label}</span>
+                <span className="mt-0.5 block text-[12px] leading-snug text-ink/70">
                   {child.description}
                 </span>
               </NavLink>
@@ -188,10 +196,10 @@ export function Tooltip({
         <TooltipPrimitive.Content
           side={side}
           sideOffset={8}
-          className="mono z-50 bg-ink px-2.5 py-1.5 text-[12px] text-paper"
+          className="mono z-50 border border-amber bg-ink px-2.5 py-1.5 text-[12px] text-paper"
         >
           {content}
-          {/* No arrow: the reference tooltip is a plain block. */}
+          {/* No arrow: a plain block reads as a label on the map. */}
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>
