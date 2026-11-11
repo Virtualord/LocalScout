@@ -52,8 +52,33 @@ export function SettingsScreen() {
 
         {data !== undefined && (
           <div className="space-y-14">
+            {/* A single plate that answers "is this instance ready?" before the
+                detail below answers "what is it running?". */}
+            <div className="flex flex-wrap items-center justify-between gap-6 border-2 border-ink bg-paper px-6 py-6 hard-shadow">
+              <div className="flex items-center gap-5">
+                <span
+                  className={`inline-block size-4 border-2 border-ink ${data.ok ? 'bg-success' : 'bg-amber'}`}
+                  aria-hidden="true"
+                />
+                <div>
+                  <p className="mono text-[10px] font-bold uppercase tracking-[0.18em] text-ink/65">
+                    Instance status
+                  </p>
+                  <p className="display mt-1 text-3xl leading-none text-ink">
+                    {data.ok ? 'Ready' : 'Degraded'}
+                  </p>
+                </div>
+              </div>
+              <p className="mono max-w-[42ch] text-[11px] uppercase leading-relaxed tracking-[0.12em] text-ink/65">
+                {data.ok
+                  ? 'Every check that must pass has passed. Missing optional keys only change what this instance can reach.'
+                  : 'One or more checks below need attention. The app still runs; read what each check changes.'}
+              </p>
+            </div>
+
             <section aria-labelledby="modes-heading">
-              <h2 id="modes-heading" className="display display-section text-ink">
+              <p className="eyebrow text-ink/65">What is configured</p>
+              <h2 id="modes-heading" className="display display-section mt-3 text-ink">
                 Active modes
               </h2>
               <Card className="mt-6 p-0">
@@ -68,26 +93,31 @@ export function SettingsScreen() {
                   value={data.keys.llm ? 'present' : 'absent — using templates'}
                 />
               </Card>
-              <p className="mono mt-4 text-[12px] text-ink/60">
+              <p className="mono mt-4 text-[12px] text-ink/70">
                 Overall: {data.ok ? 'ready' : 'degraded, see the checks below'}
               </p>
             </section>
 
-            <section aria-labelledby="checks-heading">
-              <h2 id="checks-heading" className="display display-section text-ink">
+            <section id="health" aria-labelledby="checks-heading">
+              <p className="eyebrow text-ink/65">Read live from the API</p>
+              <h2 id="checks-heading" className="display display-section mt-3 text-ink">
                 Checks
               </h2>
               <ul className="mt-6 space-y-3">
                 {data.checks.map((check) => (
                   <li key={check.name}>
-                    <Card className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                    <Card
+                      className={`flex flex-wrap items-center justify-between gap-3 border-l-4 px-5 py-4 ${
+                        check.ok ? 'border-l-success' : 'border-l-amber'
+                      }`}
+                    >
                       <div className="min-w-0">
                         <p className="mono text-[12px] font-bold uppercase tracking-wider text-ink">
                           {check.name}
                         </p>
                         <p className="mt-1 text-[14px] text-ink/75">{check.detail}</p>
                         {!check.ok && check.fix !== undefined && (
-                          <p className="mt-1.5 text-[13px] text-ink/60">{check.fix}</p>
+                          <p className="mt-1.5 text-[13px] text-ink/70">{check.fix}</p>
                         )}
                       </div>
                       <Chip variant={check.ok ? 'status-won' : 'severity-medium'}>
@@ -100,7 +130,8 @@ export function SettingsScreen() {
             </section>
 
             <section aria-labelledby="config-heading">
-              <h2 id="config-heading" className="display display-section text-ink">
+              <p className="eyebrow text-ink/65">A file, not a form</p>
+              <h2 id="config-heading" className="display display-section mt-3 text-ink">
                 Configuration
               </h2>
               <p className="prose-measure mt-3 text-[15px] leading-relaxed text-ink/70">
@@ -113,9 +144,9 @@ export function SettingsScreen() {
               <Accordion type="single" collapsible className="mt-6 border-t border-ink/15">
                 {ENV_VARS.map((variable) => (
                   <AccordionItem key={variable.name} value={variable.name} question={variable.name}>
-                    <p className="mono text-[12px] text-ink/60">{variable.purpose}</p>
+                    <p className="mono text-[12px] text-ink/70">{variable.purpose}</p>
                     <p className="mt-2 text-[14px] text-ink/80">{variable.effect}</p>
-                    <p className="mt-2 text-[13px] text-ink/60">
+                    <p className="mt-2 text-[13px] text-ink/70">
                       Default: <code className="mono">{variable.fallback}</code>
                     </p>
                   </AccordionItem>
@@ -124,7 +155,8 @@ export function SettingsScreen() {
             </section>
 
             <section aria-labelledby="privacy-heading">
-              <h2 id="privacy-heading" className="display display-section text-ink">
+              <p className="eyebrow text-ink/65">The boundary</p>
+              <h2 id="privacy-heading" className="display display-section mt-3 text-ink">
                 What leaves this machine
               </h2>
               <ul className="mt-6 space-y-4">
