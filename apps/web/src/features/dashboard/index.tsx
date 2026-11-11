@@ -51,8 +51,51 @@ export function DashboardScreen() {
 
         {data !== undefined && (
           <div className="space-y-16">
+            {/*
+              The readings strip: four counted numbers, in the same plate
+              language as the rest of the app. A missing denominator says
+              "no data" rather than rendering a misleading zero.
+            */}
+            <section aria-labelledby="readings-heading">
+              <h2 id="readings-heading" className="sr-only">
+                Survey readings
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <StatPlate
+                  label="Leads on file"
+                  value={String(
+                    Object.values(data.leads.byStatus).reduce((total, count) => total + count, 0),
+                  )}
+                  detail="Every business discovered, deduped"
+                />
+                <StatPlate
+                  label="Audits completed"
+                  value={String(data.audits.byStatus.ok)}
+                  detail={`${data.audits.total} attempted in total`}
+                />
+                <StatPlate
+                  label="Drafts written"
+                  value={String(data.drafts.total)}
+                  detail={`${data.drafts.fromTemplate} from the template`}
+                />
+                <StatPlate
+                  label="Fully grounded"
+                  value={
+                    data.drafts.total === 0 ? '—' : `${data.drafts.groundedPercent.toFixed(0)}%`
+                  }
+                  detail={
+                    data.drafts.total === 0
+                      ? 'no drafts to check yet'
+                      : `${data.drafts.grounded} of ${data.drafts.total} drafts`
+                  }
+                  tone="hot"
+                />
+              </div>
+            </section>
+
             <section aria-labelledby="milestones-heading">
-              <h2 id="milestones-heading" className="display display-section text-ink">
+              <p className="eyebrow text-ink/65">The human half</p>
+              <h2 id="milestones-heading" className="display display-section mt-3 text-ink">
                 Outreach milestones
               </h2>
               <p className="prose-measure mt-3 text-[15px] leading-relaxed text-ink/70">
@@ -66,7 +109,7 @@ export function DashboardScreen() {
                       tier={milestone.done ? 'hot' : 'normal'}
                       className="flex h-full flex-col gap-3 p-5"
                     >
-                      <span className="mono text-[11px] font-bold tracking-[0.16em] text-ink/45">
+                      <span className="mono text-[11px] font-bold tracking-[0.16em] text-ink/65">
                         {String(index + 1).padStart(2, '0')}
                       </span>
                       <p className="display text-xl text-ink">{milestone.label}</p>
@@ -79,14 +122,15 @@ export function DashboardScreen() {
                   </li>
                 ))}
               </ol>
-              <p className="mono mt-5 text-[12px] text-ink/60">
+              <p className="mono mt-5 text-[12px] text-ink/70">
                 {data.outreach.totalEntries} contact log{' '}
                 {data.outreach.totalEntries === 1 ? 'entry' : 'entries'} recorded across all leads.
               </p>
             </section>
 
             <section aria-labelledby="pipeline-heading">
-              <h2 id="pipeline-heading" className="display display-section text-ink">
+              <p className="eyebrow text-ink/65">Counted, not estimated</p>
+              <h2 id="pipeline-heading" className="display display-section mt-3 text-ink">
                 The pipeline
               </h2>
               <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -162,11 +206,12 @@ export function DashboardScreen() {
                   />
                 </Card>
               </div>
-              <p className="mono mt-5 text-[12px] text-ink/60">{data.cost.note}</p>
+              <p className="mono mt-5 text-[12px] text-ink/70">{data.cost.note}</p>
             </section>
 
             <section aria-labelledby="runs-heading">
-              <h2 id="runs-heading" className="display display-section text-ink">
+              <p className="eyebrow text-ink/65">Provenance</p>
+              <h2 id="runs-heading" className="display display-section mt-3 text-ink">
                 Where the leads came from
               </h2>
               <Card className="mt-6 p-0">
@@ -192,7 +237,8 @@ export function DashboardScreen() {
             </section>
 
             <section aria-labelledby="explain-heading">
-              <h2 id="explain-heading" className="display display-section text-ink">
+              <p className="eyebrow text-ink/65">Definitions</p>
+              <h2 id="explain-heading" className="display display-section mt-3 text-ink">
                 What these numbers mean
               </h2>
               <Accordion type="single" collapsible className="mt-6 border-t border-ink/15">
@@ -212,9 +258,41 @@ export function DashboardScreen() {
 
 function CardHeading({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mono border-b border-ink/20 bg-paper-band px-5 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-ink/60">
+    <p className="mono border-b-2 border-ink border-l-4 border-l-amber bg-paper-band px-5 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-ink/65">
       {children}
     </p>
+  );
+}
+
+/**
+ * One reading in the instrument strip.
+ *
+ * A big display number over a mono label: the number is the point, and the
+ * detail line underneath says what it is counted from. Nothing here is derived
+ * twice — it all comes from the one metrics payload.
+ */
+function StatPlate({
+  label,
+  value,
+  detail,
+  tone = 'normal',
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: 'normal' | 'hot';
+}) {
+  return (
+    <div
+      className={[
+        'flex h-full flex-col border-2 border-ink bg-paper p-5',
+        tone === 'hot' ? 'hard-shadow-coral' : 'hard-shadow',
+      ].join(' ')}
+    >
+      <p className="mono text-[10px] font-bold uppercase tracking-[0.16em] text-ink/65">{label}</p>
+      <p className="display mt-2 text-4xl leading-none text-ink">{value}</p>
+      <p className="mono mt-auto pt-3 text-[11px] leading-snug text-ink/65">{detail}</p>
+    </div>
   );
 }
 
