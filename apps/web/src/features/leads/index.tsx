@@ -94,7 +94,7 @@ export function LeadsScreen() {
             <p className="mt-1 text-[14px] text-ink/75">
               {error instanceof Error ? error.message : 'The API did not answer.'}
             </p>
-            <p className="mt-2 text-[13px] text-ink/60">
+            <p className="mt-2 text-[13px] text-ink/70">
               Start the API with <code className="mono">pnpm dev</code>, which boots both the API
               and this app.
             </p>
@@ -110,7 +110,7 @@ export function LeadsScreen() {
             {filters.view === 'map' && (
               <section aria-label="Lead map" className="mt-8">
                 <PixelMap leads={mapLeads} onSelect={(id) => setFilters({ openLeadId: id })} />
-                <p className="mono mt-4 text-[12px] text-ink/60">
+                <p className="mono mt-4 text-[12px] text-ink/70">
                   Amber is a hot lead (score 70+), coral is worth a look (40-69), pink is cold. A
                   dashed edge means the site could not be reached, which is not the same as a low
                   score.
@@ -161,7 +161,7 @@ function ViewToggle({
   onChange: (view: LeadFilters['view']) => void;
 }) {
   return (
-    <div role="group" aria-label="View" className="inline-flex border border-ink">
+    <div role="group" aria-label="View" className="inline-flex border-2 border-paper/60">
       {(['list', 'map'] as const).map((option) => (
         <button
           key={option}
@@ -170,7 +170,7 @@ function ViewToggle({
           onClick={() => onChange(option)}
           className={[
             'mono px-6 py-2.5 text-[12px] font-bold uppercase tracking-[0.14em] transition-colors',
-            view === option ? 'bg-ink text-paper' : 'bg-transparent text-paper hover:bg-paper/10',
+            view === option ? 'bg-amber text-ink' : 'bg-transparent text-paper hover:bg-paper/10',
           ].join(' ')}
         >
           {option === 'list' ? 'List' : 'Map'}
@@ -190,12 +190,12 @@ function FilterBar({
   onChange: (patch: Partial<LeadFilters>) => void;
 }) {
   return (
-    <div className="border-b border-ink/15 pb-6">
+    <div className="border-2 border-ink bg-paper p-5 hard-shadow">
       <div className="flex flex-wrap items-center gap-3">
         <div>
           <label
             htmlFor="lead-search"
-            className="mono mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-ink/55"
+            className="mono mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-ink/65"
           >
             Search
           </label>
@@ -211,7 +211,7 @@ function FilterBar({
         <div>
           <label
             htmlFor="lead-sort"
-            className="mono mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-ink/55"
+            className="mono mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-ink/65"
           >
             Sort
           </label>
@@ -230,7 +230,7 @@ function FilterBar({
         </div>
 
         <div>
-          <p className="mono mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/55">
+          <p className="mono mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/65">
             Score at least
           </p>
           <div role="group" aria-label="Minimum opportunity score" className="flex">
@@ -254,7 +254,7 @@ function FilterBar({
         </div>
 
         <div className="ml-auto self-end">
-          <p className="mono text-[12px] text-ink/60">
+          <p className="mono text-[12px] text-ink/70">
             {total} {total === 1 ? 'lead' : 'leads'}
           </p>
         </div>

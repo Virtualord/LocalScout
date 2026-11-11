@@ -52,7 +52,10 @@ export function LeadCard({ lead, onOpen }: LeadCardProps) {
         <h3 className="display-card mt-3 truncate text-ink">{lead.name}</h3>
 
         <p className="mono mt-1.5 flex items-center gap-2 text-[12px] text-ink/65">
-          <span className="inline-block size-2 bg-ink/40" aria-hidden="true" />
+          <span
+            className={['inline-block size-2', tier === 'hot' ? 'bg-coral' : 'bg-ink/40'].join(' ')}
+            aria-hidden="true"
+          />
           {lead.category ?? 'Business'}
           {lead.address ? ` · ${lead.address}` : ''}
         </p>

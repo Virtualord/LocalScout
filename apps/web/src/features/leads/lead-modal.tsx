@@ -190,20 +190,20 @@ function LeadModalBody({
                 {data.lead.websiteUrl.replace(/^https?:\/\//, '')}
               </a>
             ) : (
-              <em className="text-ink/50">no website</em>
+              <em className="text-ink/65">no website</em>
             )}
           </Fact>
           <Fact label="Phone">
-            {data.lead.phoneE164 ?? <em className="text-ink/50">none recorded</em>}
+            {data.lead.phoneE164 ?? <em className="text-ink/65">none recorded</em>}
           </Fact>
           <Fact label="Email">
-            {data.lead.contactEmail ?? <em className="text-ink/50">none published</em>}
+            {data.lead.contactEmail ?? <em className="text-ink/65">none published</em>}
           </Fact>
           <Fact label="Rating">
             {data.lead.rating !== null && data.lead.reviewCount !== null ? (
               `${data.lead.rating.toFixed(1)} from ${data.lead.reviewCount} reviews`
             ) : (
-              <em className="text-ink/50">not recorded</em>
+              <em className="text-ink/65">not recorded</em>
             )}
           </Fact>
         </dl>
@@ -247,7 +247,7 @@ function LeadModalBody({
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-3">
-      <dt className="mono w-20 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/50">
+      <dt className="mono w-20 shrink-0 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/65">
         {label}
       </dt>
       <dd className="mono min-w-0 flex-1 truncate text-[13px] text-ink">{children}</dd>
@@ -314,7 +314,7 @@ function EvidenceTab({
           <h3 id="findings-heading" className="display text-2xl text-ink">
             What was measured
           </h3>
-          <span className="mono text-[11px] uppercase tracking-wider text-ink/50">
+          <span className="mono text-[11px] uppercase tracking-wider text-ink/65">
             {metricAvailability(audit)}
           </span>
         </div>
@@ -357,7 +357,33 @@ function EvidenceTab({
             <ComparisonRow key={row.label} label={row.label} value={row.value} />
           ))}
         </Card>
-        <p className="mono mt-3 text-[11px] uppercase tracking-wider text-ink/50">
+
+        {/*
+          The three 0-100 scores get a gauge as well as a number. A bar is
+          easier to scan than a list of integers, and a missing score draws no
+          bar at all rather than an empty one that reads as zero.
+        */}
+        {scoreGauges(audit).length > 0 && (
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            {scoreGauges(audit).map((gauge) => (
+              <div key={gauge.label} className="border-2 border-ink bg-paper p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink/70">
+                    {gauge.label}
+                  </span>
+                  <span className="display text-2xl leading-none text-ink">
+                    {Math.round(gauge.value)}
+                  </span>
+                </div>
+                <div className="gauge mt-3" aria-hidden="true">
+                  <div className="gauge-fill" style={{ width: `${gauge.value}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="mono mt-3 text-[11px] uppercase tracking-wider text-ink/65">
           Audited in {(audit.durationMs / 1000).toFixed(1)}s
           {audit.reportPath ? ` · report at ${audit.reportPath}` : ''}
         </p>
@@ -379,8 +405,14 @@ function FindingRow({ finding }: { finding: StoredFinding }) {
     } satisfies Record<StoredFinding['severity'], ChipVariant>
   )[finding.severity];
 
+  const severityRail = {
+    high: 'border-l-coral',
+    medium: 'border-l-amber',
+    low: 'border-l-sage',
+  } satisfies Record<StoredFinding['severity'], string>;
+
   return (
-    <li className="border-l-4 border-ink/20 pl-4">
+    <li className={`border-l-4 ${severityRail[finding.severity]} pl-4`}>
       <div className="flex flex-wrap items-center gap-2">
         <Chip variant={severityClass}>{finding.severity}</Chip>
         <span className="text-[15px] font-medium text-ink">{finding.label}</span>
@@ -452,6 +484,16 @@ function present(value: number | undefined, format: (value: number) => string): 
   return value === undefined ? 'not measured' : format(value);
 }
 
+/** The three 0-100 scores, omitting any that were not measured. */
+function scoreGauges(audit: AuditSummary): { label: string; value: number }[] {
+  const metrics = audit.metrics;
+  return [
+    { label: 'Performance', value: metrics.perf_score },
+    { label: 'Accessibility', value: metrics.a11y_score },
+    { label: 'SEO', value: metrics.seo_score },
+  ].filter((entry): entry is { label: string; value: number } => entry.value !== undefined);
+}
+
 /* -------------------------------------------------------------------------- */
 /* Draft                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -491,9 +533,9 @@ function DraftTab({
                 : `${languageLabel(option)} — draft ready`
             }
             className={[
-              'mono border px-3 py-1.5 text-[11px] uppercase tracking-wider transition-colors',
+              'mono border-2 px-3 py-1.5 text-[11px] uppercase tracking-wider transition-colors',
               language === option
-                ? 'border-ink bg-ink text-paper'
+                ? 'border-ink bg-amber text-ink'
                 : 'border-ink/30 bg-paper text-ink/70 hover:border-ink',
             ].join(' ')}
           >
@@ -606,9 +648,9 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
   };
 
   return (
-    <div className="border border-ink">
-      <div className="flex items-center justify-between border-b border-ink/20 bg-paper-band px-4 py-2">
-        <span className="mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink/60">
+    <div className="border-2 border-ink border-l-4 border-l-coral bg-paper">
+      <div className="flex items-center justify-between border-b-2 border-ink bg-paper-band px-4 py-2">
+        <span className="mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink/70">
           {label}
         </span>
         <Button variant="secondary" className="btn-sm" onClick={() => void copy()}>
@@ -645,7 +687,7 @@ function ContactTab({ entries }: { entries: ContactLogEntry[] }) {
       {entries.map((entry) => (
         <li key={entry.id} className="relative">
           <span aria-hidden="true" className="absolute -left-[38px] top-1 size-3 bg-blue" />
-          <p className="mono text-[11px] uppercase tracking-wider text-ink/50">
+          <p className="mono text-[11px] uppercase tracking-wider text-ink/65">
             {entry.channel} · {entry.event} · {new Date(entry.at).toLocaleString()}
           </p>
           {entry.note && <p className="mt-1 text-[14px] text-ink/80">{entry.note}</p>}
