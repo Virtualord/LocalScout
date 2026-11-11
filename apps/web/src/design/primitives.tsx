@@ -119,7 +119,7 @@ export function TimelineStep({
     <div className="relative pb-9 last:pb-0">
       <span
         aria-hidden="true"
-        className="absolute left-[-32px] top-1 size-3 bg-blue"
+        className="absolute left-[-32px] top-1 size-3 bg-amber"
         style={{ left: 'calc(40% - 28px)' }}
       />
       <div className="mono text-[11px] font-bold tracking-[0.16em] text-paper/60">

@@ -33,8 +33,8 @@ const CLASSES: Record<ChipVariant, string> = {
   finding: 'bg-paper text-ink border border-ink',
   'status-sent': 'bg-ink text-paper',
   'status-replied': 'bg-amber text-ink',
-  'status-won': 'bg-coral text-ink',
-  'status-lost': 'bg-paper-band-2 text-ink border border-ink',
+  'status-won': 'bg-success text-paper',
+  'status-lost': 'bg-paper-band-2 text-ink border-ink',
   'severity-high': 'bg-coral text-ink',
   'severity-medium': 'bg-amber text-ink',
   'severity-low': 'bg-sage text-ink',
@@ -44,7 +44,7 @@ export function Chip({ variant = 'neutral', children, className = '' }: ChipProp
   return (
     <span
       className={[
-        'mono inline-flex items-center gap-1 px-2 py-[3px] text-[11px] font-bold uppercase tracking-wider',
+        'mono inline-flex items-center gap-1 border border-ink/40 px-2 py-[3px] text-[11px] font-bold uppercase tracking-wider',
         CLASSES[variant],
         className,
       ]

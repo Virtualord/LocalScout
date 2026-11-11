@@ -43,18 +43,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         className={[
           // `field` so the focus ring is drawn on this border, not on the input
           // inside it. See `.field` in global.css.
-          'field flex items-center gap-2 border bg-white px-3',
+          'field flex items-center gap-2 border bg-paper px-3',
           // The error border is the only place a non-ink border appears.
           error ? 'border-red' : 'border-ink',
         ].join(' ')}
       >
-        {icon && <span className="shrink-0 text-ink/60">{icon}</span>}
+        {icon && <span className="shrink-0 text-ink/70">{icon}</span>}
         <input
           ref={ref}
           id={inputId}
           aria-invalid={error !== undefined}
           aria-describedby={error && inputId ? `${inputId}-error` : undefined}
-          className="w-full bg-transparent py-2.5 text-[15px] text-ink placeholder:text-ink/45"
+          className="w-full bg-transparent py-2.5 text-[15px] text-ink placeholder:text-ink/65"
           {...rest}
         />
       </div>
@@ -116,7 +116,7 @@ export function SearchField({
         <div className="field flex flex-1 items-stretch">
           <div
             className={[
-              'flex flex-1 items-center gap-2 border border-r-0 bg-white px-4',
+              'flex flex-1 items-center gap-2 border border-r-0 bg-paper px-4',
               error ? 'border-red' : 'border-ink',
             ].join(' ')}
           >
@@ -128,7 +128,7 @@ export function SearchField({
               placeholder={placeholder}
               aria-invalid={error !== undefined}
               aria-describedby={error ? `${inputId}-error` : undefined}
-              className="w-full bg-transparent py-4 text-[15px] text-ink placeholder:text-ink/45"
+              className="w-full bg-transparent py-4 text-[15px] text-ink placeholder:text-ink/65"
             />
           </div>
 

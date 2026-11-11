@@ -32,7 +32,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
     <div
       ref={ref}
       className={[
-        'bg-paper border border-ink',
+        'relative bg-paper border-2 border-ink',
         tier === 'hot' ? 'hard-shadow-coral' : 'hard-shadow',
         !isStatic ? 'press-in' : '',
         className,
@@ -54,10 +54,10 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
  */
 /** The dashed card's appearance, shared by the button and the link form. */
 const DASHED_CTA_CLASSES = [
-  'w-full border border-dashed border-ink bg-transparent p-6 text-left',
+  'w-full border-2 border-dashed border-ink bg-transparent p-6 text-left',
   'display-card text-ink',
   'transition-colors duration-[--dur-fast]',
-  'hover:bg-paper',
+  'hover:border-solid hover:bg-paper-band',
 ].join(' ');
 
 export const DashedCtaCard = forwardRef<HTMLButtonElement, HTMLAttributes<HTMLButtonElement>>(
@@ -107,7 +107,7 @@ export function ScoreBlock({ score }: { score: number | null | undefined }) {
   const missing = score === null || score === undefined;
 
   return (
-    <div className="border-l border-ink pl-5 text-center">
+    <div className="border-l-2 border-ink pl-5 text-center">
       <div className="mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink/70">
         Score
       </div>
@@ -119,14 +119,14 @@ export function ScoreBlock({ score }: { score: number | null | undefined }) {
             This one answers the narrower question, which is whether a number
             exists.
           */}
-          <span className="mono max-w-[7ch] text-[10px] uppercase leading-tight tracking-wider text-ink/45">
+          <span className="mono max-w-[7ch] text-[10px] uppercase leading-tight tracking-wider text-ink/65">
             Not measured
           </span>
         </div>
       ) : (
         <>
           <div className="display my-1 text-5xl leading-none text-ink">{score}</div>
-          <div className="mono text-[10px] uppercase tracking-wider text-ink/60">/100</div>
+          <div className="mono text-[10px] uppercase tracking-wider text-ink/70">/100</div>
         </>
       )}
     </div>

@@ -1,74 +1,130 @@
 /*
- * Design tokens.
+ * Design tokens — "Local Business Exploration".
  *
- * Every colour, duration and easing in the app comes from this file. Components
- * reference tokens only; an ad-hoc hex value in a component is a bug, because it
- * cannot be checked for contrast and will not follow the palette.
+ * The visual identity of Localscout. It borrows the *language* of an editorial
+ * field atlas: deep petrol green as the survey ground, warm cream as the paper,
+ * muted coral and golden yellow as the marks a surveyor makes, and a pale
+ * periwinkle as the secondary signal. Every colour, duration and easing in the
+ * app comes from this file. Components reference tokens only; an ad-hoc hex
+ * value in a component is a bug, because it cannot be checked for contrast and
+ * will not follow the palette.
+ *
+ * The palette is original. It was developed for this product around its subject
+ * — local businesses, maps, measurement and human review — not sampled from an
+ * external visual reference.
  *
  * Contrast pairs worth knowing, since several of these are close together:
  *
- *   paper   #F7F7F2 on band-dark #2D4641  -> 11.4:1  body text
- *   paper   #F7F7F2 on bg       #3D5F58  ->  6.8:1  body text on teal
- *   ink     #10201D on coral    #E97B77  ->  6.9:1  button labels
- *   ink     #10201D on paper    #F7F7F2  -> 14.9:1  body text on cards
- *   coral   #E97B77 on bg       #3D5F58  ->  2.5:1  display accents only, 48px+
- *   red     #E53927 on paper    #F7F7F2  ->  4.2:1  accent words on paper bands
- *   amber   #F5B726 on band-dark #2D4641 -> 7.2:1  numbers on dark bands
- *   ink     #10201D on amber    #F5B726  ->  9.4:1
+ *   cream   #FCF7EC on petrol-800 #113B34 -> 11.4:1  body text
+ *   cream   #FCF7EC on petrol-900 #0B2E27 -> 13.9:1  body text on deep bands
+ *   ink     #161D19 on coral      #E0836B ->  6.2:1  button labels
+ *   ink     #161D19 on cream      #FCF7EC -> 15.1:1  body text on cards
+ *   coral   #E0836B on petrol-800 #113B34 ->  4.5:1  display accents only, 48px+
+ *   brick   #B8402C on cream      #FCF7EC ->  5.2:1  accent words on paper bands
+ *   ink     #161D19 on gold       #F2B33D ->  9.2:1  primary button labels
+ *   gold    #F2B33D on petrol-800 #113B34 ->  6.6:1  numbers and emphasis on dark bands
+ *   violet  #8E8BEE on petrol-800 #113B34 ->  4.2:1  display accents only, 48px+
+ *   ink     #161D19 on sage       #D9E3C5 -> 12.6:1  status chips
  *
- * The one pair below the 4.5:1 body threshold is coral on teal, which is why
+ * The one pair below the 4.5:1 body threshold is coral on petrol, which is why
  * coral text is restricted to display sizes of 48px and up.
  */
 
 :root {
+  /* ------------------------------------------------------------------ */
+  /* Palette — the raw pigments, named by what they are.                */
+  /* ------------------------------------------------------------------ */
+  --petrol-950: #07211c;
+  --petrol-900: #0b2e27;
+  --petrol-800: #113b34;
+  --petrol-700: #1b4b42;
+  --petrol-600: #2a5f54;
+  --cream-50: #fcf7ec;
+  --cream-100: #f8f1e1;
+  --cream-200: #f0e5ce;
+  --cream-300: #e6d8bb;
+  --ink-900: #161d19;
+  --coral-500: #e0836b;
+  --coral-600: #a94a36;
+  --coral-700: #6e2a1d;
+  --gold-500: #f2b33d;
+  --violet-400: #8e8bee;
+  --violet-700: #443c8c;
+  --brick-600: #b8402c;
+  --peach-300: #f6cdb9;
+  --sage-300: #d9e3c5;
+
+  /* ------------------------------------------------------------------ */
+  /* Roles — how the palette is used. Components should prefer these.   */
+  /* ------------------------------------------------------------------ */
+
   /* Surfaces */
-  --color-bg: #3d5f58;
-  --color-bg-deep: #324f49;
-  --color-band-dark: #2d4641;
-  --color-paper: #f7f7f2;
-  --color-paper-band: #f1f1ec;
-  --color-paper-band-2: #e6e3dc;
+  --color-bg: var(--petrol-800); /* main dark ground (header, hero) */
+  --color-bg-deep: var(--petrol-900); /* recessed dark surface */
+  --color-band-dark: var(--petrol-950); /* darkest band, shadow pigment */
+  --color-paper: var(--cream-50); /* warm paper, the primary light surface */
+  --color-paper-band: var(--cream-100); /* first tint of paper */
+  --color-paper-band-2: var(--cream-200); /* second tint of paper */
   --color-white: #ffffff;
 
   /* Ink and structure */
-  --color-ink: #10201d;
+  --color-ink: var(--ink-900);
+  --color-ink-soft: #3a4741;
 
   /* Accents */
-  --color-coral: #e97b77;
-  --color-coral-shadow: #671912;
-  --color-red: #e53927;
-  --color-pink: #f6c4c1;
-  --color-amber: #f5b726;
-  --color-blue: #8dafde;
-  --color-sage: #dce8ce;
+  --color-coral: var(--coral-500);
+  --color-coral-deep: var(--coral-600); /* coral as text on cream: 5.3:1 */
+  --color-coral-shadow: var(--coral-700);
+  --color-red: var(--brick-600);
+  --color-pink: var(--peach-300);
+  --color-amber: var(--gold-500);
+  --color-blue: var(--violet-400);
+  --color-violet-deep: var(--violet-700);
+  --color-sage: var(--sage-300);
 
-  /* Map */
-  --color-land: #5b7873;
-  --color-land-dim: #45655e;
-  --color-land-peak: #b9cbc6;
+  /* Map — a surveyed landscape, not a chart. */
+  --color-land: #4a7d6f;
+  --color-land-dim: #356057;
+  --color-land-peak: #cbe0d6;
+
+  /* Semantic roles, for new work. */
+  --color-primary: var(--color-amber);
+  --color-primary-ink: var(--color-ink);
+  --color-secondary: var(--color-coral);
+  --color-surface: var(--color-paper);
+  --color-surface-raised: var(--color-white);
+  --color-text: var(--color-ink);
+  --color-text-on-dark: var(--color-paper);
+  --color-success: #3f7d5a;
+  --color-warning: var(--color-amber);
+  --color-danger: var(--color-red);
+  --color-info: var(--color-blue);
+  --color-focus: var(--color-amber);
 
   /* Motion */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-fast: 120ms;
   --dur-base: 220ms;
   --dur-slow: 320ms;
 
   /* Shape */
   --radius: 0;
-  --shadow-hard: 4px 4px 0;
+  --shadow-hard: 5px 5px 0;
 
   /* Layout */
   --container: 1440px;
   --header-height: 88px;
+  --rule-tick: 10px;
 
   /* Type */
-  --font-display: 'Barlow Condensed', 'Anton', 'Arial Narrow', sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 
-  --text-hero: clamp(3rem, 7vw, 5.5rem);
-  --text-section: clamp(2.25rem, 4.5vw, 3.75rem);
-  --text-card-title: 1.25rem;
+  --text-hero: clamp(2.9rem, 6.2vw, 5.4rem);
+  --text-section: clamp(2.1rem, 4.4vw, 3.6rem);
+  --text-card-title: 1.3rem;
 }
 
 /*
@@ -84,16 +140,22 @@
   --color-paper-band-2: var(--color-paper-band-2);
   --color-white: var(--color-white);
   --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
   --color-coral: var(--color-coral);
+  --color-coral-deep: var(--color-coral-deep);
   --color-coral-shadow: var(--color-coral-shadow);
   --color-red: var(--color-red);
   --color-pink: var(--color-pink);
   --color-amber: var(--color-amber);
   --color-blue: var(--color-blue);
+  --color-violet-deep: var(--color-violet-deep);
   --color-sage: var(--color-sage);
   --color-land: var(--color-land);
   --color-land-dim: var(--color-land-dim);
   --color-land-peak: var(--color-land-peak);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
 
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
@@ -102,16 +164,17 @@
   --radius-sharp: 0;
 }
 
-/* Selected text renders on the coral accent, as in the reference. */
+/* Selected text renders on the golden survey mark. */
 ::selection {
-  background: var(--color-coral);
+  background: var(--color-amber);
   color: var(--color-ink);
 }
 
 /*
  * Focus is always visible and always 3px, because every interactive element in
  * this app is reachable by keyboard and a keyboard user must always know where
- * they are.
+ * they are. Gold reads on both the cream paper and the petrol ground, which the
+ * single-colour ring it replaces could not.
  *
  * Unlayered, which is worth knowing: Tailwind's utilities live in
  * `@layer utilities`, and unlayered CSS beats every layered rule whatever its
@@ -120,7 +183,7 @@
  * stylesheet. `.field` in global.css is the one place that does.
  */
 :focus-visible {
-  outline: 3px solid var(--color-paper);
+  outline: 3px solid var(--color-amber);
   outline-offset: 2px;
 }
 
@@ -149,6 +212,7 @@ body {
   /* Line length stays under 80 characters. */
   max-width: 100%;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /*

@@ -60,7 +60,7 @@ export function DialogContent({
         className={[
           'dialog-panel fixed left-1/2 top-1/2 z-50 flex w-[min(94vw,1000px)] -translate-x-1/2 -translate-y-1/2 flex-col',
           size === 'lg' ? 'max-h-[88vh]' : 'max-h-[86vh]',
-          'border border-ink bg-paper text-ink',
+          'border border-ink border-t-4 border-t-amber bg-paper text-ink',
           size === 'lg' ? 'p-0' : 'p-7',
           className,
         ]
@@ -95,7 +95,7 @@ export function DialogContent({
             <button
               type="button"
               aria-label="Close"
-              className="mono flex size-7 shrink-0 items-center justify-center border border-ink bg-paper text-[15px] leading-none text-ink transition-colors hover:bg-ink hover:text-paper"
+              className="mono flex size-7 shrink-0 items-center justify-center border border-ink bg-paper text-[15px] leading-none text-ink transition-colors hover:bg-amber hover:text-ink"
             >
               ×
             </button>
