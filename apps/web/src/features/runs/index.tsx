@@ -94,13 +94,16 @@ function RunCard({ run }: { run: RunSummary }) {
   const stoppable = run.status === 'queued' || run.status === 'running';
 
   return (
-    <Card className="p-0">
+    <Card className="overflow-hidden p-0">
+      {/* The rail states the outcome before a word is read: gold for a run in
+          progress, green for one that completed, red for one that failed. */}
+      <div className={`h-1.5 ${railFor(run.status)}`} aria-hidden="true" />
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-ink/20 px-5 py-4">
         <div>
           <h2 className="display text-2xl text-ink">
-            {run.query} <span className="text-ink/45">in</span> {run.location}
+            {run.query} <span className="text-ink/65">in</span> {run.location}
           </h2>
-          <p className="mono mt-1 text-[11px] uppercase tracking-wider text-ink/55">
+          <p className="mono mt-1 text-[11px] uppercase tracking-wider text-ink/65">
             {run.startedAt !== null ? formatWhen(run.startedAt) : 'not started'} · limit {run.limit}{' '}
             · {run.language}
           </p>
@@ -153,6 +156,14 @@ function RunCard({ run }: { run: RunSummary }) {
       )}
     </Card>
   );
+}
+
+/** The colour of the rail along the top of a run card. */
+export function railFor(status: RunStatus): string {
+  if (status === 'completed') return 'bg-success';
+  if (status === 'failed') return 'bg-red';
+  if (status === 'running' || status === 'queued') return 'bg-amber';
+  return 'bg-paper-band-2';
 }
 
 /** Status colours follow the funnel: green when it worked, red when it did not. */
