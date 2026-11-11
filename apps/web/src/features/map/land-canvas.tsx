@@ -14,8 +14,8 @@ import { hash, mixHex, spotlightFalloff, type LayoutResult } from './layout.js';
  * point of the whole style.
  */
 
-const LAND = '#5b7873';
-const LAND_PEAK = '#b9cbc6';
+const LAND = '#4a7d6f';
+const LAND_PEAK = '#cbe0d6';
 
 export interface LandCanvasProps {
   layout: LayoutResult;
